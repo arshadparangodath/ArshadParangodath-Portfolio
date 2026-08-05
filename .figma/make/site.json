@@ -1,0 +1,10 @@
+{
+  "description": "Showcase your projects in an immersive 3D sphere, allowing users to interact with cards that reveal detailed project information in a visually stunning format.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
