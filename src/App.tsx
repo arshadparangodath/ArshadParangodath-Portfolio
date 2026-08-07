@@ -8,6 +8,7 @@ import { ContactPage } from './components/pages/ContactPage'
 import { Cursor } from './components/ui/Cursor'
 import { Preloader } from './components/ui/Preloader'
 import { useReducedMotion } from './hooks/useReducedMotion'
+import { setLenisInstance } from './lib/lenisController'
 
 export default function App() {
   const reducedMotion = useReducedMotion()
@@ -18,6 +19,7 @@ export default function App() {
   useEffect(() => {
     if (reducedMotion || route === 'works') return
     const lenis = new Lenis({ lerp: 0.1, smoothWheel: true })
+    setLenisInstance(lenis)
     let raf = 0
     const loop = (time: number) => {
       lenis.raf(time)
@@ -26,6 +28,7 @@ export default function App() {
     raf = requestAnimationFrame(loop)
     return () => {
       cancelAnimationFrame(raf)
+      setLenisInstance(null)
       lenis.destroy()
     }
   }, [reducedMotion, route])

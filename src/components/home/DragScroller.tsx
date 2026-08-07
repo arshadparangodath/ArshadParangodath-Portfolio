@@ -91,20 +91,40 @@ export function DragScroller({
   }, [])
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
+    // Note: pointer capture is intentionally NOT taken here. Capturing on
+    // every pointerdown (including a plain click) retargets the resulting
+    // synthetic `click` event to this element instead of the button that was
+    // actually clicked — per the Pointer Events spec, once an element holds
+    // pointer capture, compatibility mouse/click events are redirected to it.
+    // That silently broke clicks on cards. We only capture once we've
+    // confirmed an actual drag, in onPointerMove below.
     drag.current = { active: true, startX: e.clientX, startOffset: x.current, moved: false }
-    ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
   }, [])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!drag.current.active) return
     const dx = e.clientX - drag.current.startX
-    if (Math.abs(dx) > 10) drag.current.moved = true
-    x.current = drag.current.startOffset + dx
+    if (!drag.current.moved && Math.abs(dx) > 10) {
+      drag.current.moved = true
+      // Now that we know this is a real drag (not a click), capture the
+      // pointer so the rest of the gesture tracks correctly even if the
+      // cursor leaves the viewport.
+      try {
+        ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
+      } catch {
+        /* pointer may already be gone — safe to ignore */
+      }
+    }
+    if (drag.current.moved) {
+      x.current = drag.current.startOffset + dx
+    }
   }, [])
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     drag.current.active = false
-    ;(e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId)
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      ;(e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId)
+    }
     // Defer reset so the click event (which fires right after pointerup) can
     // still read the moved flag before we clear it.
     requestAnimationFrame(() => { drag.current.moved = false })

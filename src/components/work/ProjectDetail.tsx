@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { playSfx } from '../../audio/audio'
+import { pauseLenis, resumeLenis } from '../../lib/lenisController'
 import type { Project } from '../../data/projects'
 
 interface ProjectDetailProps {
@@ -80,6 +81,25 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // The page behind this overlay is `position: fixed`, so it's invisible but
+  // still "there" — without this, the global Lenis smooth-scroll keeps
+  // capturing the mouse wheel and applies it to that hidden background page
+  // instead of this modal's own scroll container. That's what made the modal
+  // feel unscrollable by mouse (touch scrolling isn't affected, which is why
+  // mobile worked fine) and left the background page's scroll position out of
+  // sync — feeling "stuck" — once the modal closed. Pausing Lenis and locking
+  // body scroll for the lifetime of this component fixes both.
+  useEffect(() => {
+    pauseLenis()
+    const { body } = document
+    const prevOverflow = body.style.overflow
+    body.style.overflow = 'hidden'
+    return () => {
+      body.style.overflow = prevOverflow
+      resumeLenis()
+    }
   }, [])
 
   return (
