@@ -16,20 +16,20 @@ import { AdminGate } from '../admin/AdminGate'
 
 const STORY = [
   {
-    heading: 'It started with a signboard',
-    body: 'I grew up in Kozhikode watching my uncle hand-paint shop signs. He measured letters with his thumb and never got them wrong. That was the first time I understood that design is a craft with rules you can feel before you can name them — and I have been chasing that feeling ever since.',
+    heading: 'It started with curiosity',
+    body: 'I never followed a traditional design path. I\'m a self-taught designer from Kerala who started by exploring graphic design out of pure curiosity. Every tutorial, every project, and every mistake became part of my learning process. That curiosity still drives everything I create today.',
   },
   {
-    heading: 'From print rooms to fragment shaders',
-    body: 'My first paid job was setting wedding invitations in a print shop with one ageing Mac. A decade later I write shaders for a living. The tools changed completely; the questions did not. What is this for? Who is it for? What can we take away?',
+    heading: 'More than just UI/UX',
+    body: 'Over the years, I\'ve worked across branding, visual design, motion graphics, and product design. Being a multidisciplinary designer has taught me to look beyond individual screens and think about the complete experience—from the first impression to the final interaction.',
   },
   {
-    heading: 'How I actually work',
-    body: 'I start on paper, badly and quickly. Then I build the smallest thing that can be wrong in public — a prototype, not a mockup. Most of my good decisions have come from watching someone use a rough build and quietly noticing where they hesitate.',
+    heading: 'How I solve problems',
+    body: 'I believe every design challenge has a solution. I start by understanding the problem, sketch ideas quickly, prototype early, and refine through feedback. My biggest strength is adaptability—I enjoy learning new tools, technologies, and workflows whenever they help create a better product.',
   },
   {
     heading: 'What I believe',
-    body: 'Interfaces should feel like objects, not documents. Motion is meaning, not decoration. Accessibility is a design constraint, not a checklist at the end. And nothing ships until it is fast — the most beautiful screen in the world is worthless at 40ms of input lag.',
+    body: 'Good design isn\'t about making things look beautiful—it\'s about making them feel effortless. I value simplicity, clarity, accessibility, and performance in every product I design. If an experience solves a real problem while feeling intuitive, then it\'s doing its job.',
   },
 ]
 
@@ -44,25 +44,25 @@ const FUN = [
 
 const EXPERIENCE = [
   {
-    role: 'Independent Design Engineer',
-    org: 'Self-employed — Remote',
-    period: '2022 — Present',
-    years: '3 yrs',
+    role: 'Brand & Motion Designer',
+    org: 'MyD Bucket — Remote(Dubai)',
+    period: '2025 — Present',
+    years: '1 yrs',
     points: [
-      'Partner directly with 4–6 brands a year on immersive web experiences, owning concept, art direction, and production code end to end.',
-      'Shipped nine WebGL-led sites, three of which received Awwwards recognition.',
-      'Built a reusable real-time rendering toolkit that cut project setup time by roughly 40%.',
+      'Crafted brand identities, website visuals, and motion experiences.',
+      'Designed intuitive UI/UX interfaces with a focus on clarity and usability.',
+      'Produced AI-powered creatives, animations, and premium visual assets.',
     ],
   },
   {
-    role: 'Senior Creative Developer',
-    org: 'Locomotive — Montréal (remote)',
-    period: '2020 — 2022',
-    years: '2 yrs',
+    role: 'Founding Designer',
+    org: 'Healine — Remote (Dubai)',
+    period: '2024 — 2025',
+    years: '1 yrs',
     points: [
-      'Led front-end and motion for flagship client launches across retail, culture, and technology.',
-      'Introduced a shared motion-token system adopted across six concurrent projects.',
-      'Mentored three junior developers into full project ownership.',
+      'Led the end-to-end product design as the Founding Designer, transforming early ideas into a scalable healthcare platform through user research, UX strategy, wireframing, prototyping, and high-fidelity UI design.',
+      'Built and maintained the complete design ecosystem, including the design system, brand identity, marketing creatives, website design, motion graphics, and product animations, ensuring a cohesive experience across every touchpoint.',
+      'Collaborated closely with founders and developers throughout the product lifecycle, rapidly iterating on feedback, defining product direction, and delivering production-ready designs that accelerated development and business growth.',
     ],
   },
   {
@@ -475,7 +475,7 @@ function SelfHero() {
             transition: 'opacity 900ms cubic-bezier(.16,1,.3,1) 200ms, transform 900ms cubic-bezier(.16,1,.3,1) 200ms',
           }}
         >
-          ARSHAD
+          Arshad
         </span>
       </div>
 
@@ -492,7 +492,7 @@ function SelfHero() {
             transition: 'opacity 900ms cubic-bezier(.16,1,.3,1) 350ms, transform 900ms cubic-bezier(.16,1,.3,1) 350ms',
           }}
         >
-          PARANGODATH
+          Parangodath
         </span>
 
         {/* subtitle */}
@@ -503,7 +503,7 @@ function SelfHero() {
             transition: 'opacity 700ms ease 600ms',
           }}
         >
-          Design Engineer · Kozhikode, India
+          Visual Designer · Kerala, India
         </p>
 
         {/* stats row */}
@@ -516,10 +516,9 @@ function SelfHero() {
           }}
         >
           {[
-            { n: '10+', l: 'Years' },
+            { n: '3+', l: 'Years' },
             { n: '68', l: 'Projects' },
             { n: '24', l: 'Clients' },
-            { n: '9', l: 'Awards' },
           ].map((s) => (
             <div key={s.l} className="text-right">
               <dt className="font-display text-2xl font-light tabular-nums" style={{ color: AMBER }}>
