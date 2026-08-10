@@ -86,20 +86,19 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
   // The page behind this overlay is `position: fixed`, so it's invisible but
   // still "there" — without this, the global Lenis smooth-scroll keeps
   // capturing the mouse wheel and applies it to that hidden background page
-  // instead of this modal's own scroll container. That's what made the modal
-  // feel unscrollable by mouse (touch scrolling isn't affected, which is why
-  // mobile worked fine) and left the background page's scroll position out of
-  // sync — feeling "stuck" — once the modal closed. Pausing Lenis and locking
-  // body scroll for the lifetime of this component fixes both.
+  // instead of this modal's own scroll container. Pausing Lenis for the
+  // lifetime of this component fixes that.
+  //
+  // Deliberately NOT also locking body scroll (e.g. `body.style.overflow =
+  // 'hidden'`) here — that combination (a hidden-overflow body plus a fixed,
+  // independently-scrolling modal) is a well-known trap on mobile Safari/
+  // Chrome that can freeze scrolling on *both* the body and the modal's own
+  // scroll container, and doesn't always cleanly recover when toggled back
+  // on close. It's also unnecessary: the modal already fully covers the
+  // viewport, so there's nothing for the user to see or scroll behind it.
   useEffect(() => {
     pauseLenis()
-    const { body } = document
-    const prevOverflow = body.style.overflow
-    body.style.overflow = 'hidden'
-    return () => {
-      body.style.overflow = prevOverflow
-      resumeLenis()
-    }
+    return () => resumeLenis()
   }, [])
 
   return (
