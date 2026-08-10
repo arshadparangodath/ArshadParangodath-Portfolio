@@ -171,6 +171,22 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
           </p>
         </div>
 
+        {project.caseStudyUrl && (
+          <div data-reveal className="mt-8 overflow-hidden">
+            <a
+              href={project.caseStudyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 rounded-full border border-white/25 bg-white/5 px-6 py-3 font-mono text-[11px] uppercase tracking-[0.2em] text-white/85 backdrop-blur transition hover:border-white/50 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              Complete case study
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M3.5 8.5L8.5 3.5M8.5 3.5H4M8.5 3.5V8" />
+              </svg>
+            </a>
+          </div>
+        )}
+
         <dl className="mt-14 grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
           <Meta label="Client" value={project.client} />
           <Meta label="Collaboration" value={meta.partner} />
@@ -223,10 +239,20 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
         {/* --- gallery --- */}
         <div className="mt-16 grid gap-4 sm:grid-cols-2">
           <div data-reveal className="aspect-[4/3] overflow-hidden rounded-xl border border-white/10 sm:col-span-2">
-            <img src={project.hero} alt={`${project.title} — full-bleed still`} loading="lazy" className="h-full w-full object-cover" />
+            <img
+              src={project.gallery?.[0] || project.hero}
+              alt={`${project.title} — full-bleed still`}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
           </div>
           <div data-reveal className="aspect-[4/3] overflow-hidden rounded-xl border border-white/10">
-            <img src={project.thumb} alt={`${project.title} — detail`} loading="lazy" className="h-full w-full object-cover" />
+            <img
+              src={project.gallery?.[1] || project.thumb}
+              alt={`${project.title} — detail`}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
           </div>
           <div
             data-reveal

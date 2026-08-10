@@ -165,15 +165,47 @@ function Editor({
             <Area label="Summary" value={p.summary} onChange={(v) => set({ summary: v })} />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Thumbnail URL" value={p.thumb} onChange={(v) => set({ thumb: v })} hint="3D card" />
-              <Field label="Hero image URL" value={p.hero} onChange={(v) => set({ hero: v })} hint="Project page" />
+              <Field label="Hero image URL" value={p.hero} onChange={(v) => set({ hero: v })} hint="Project page — main image" />
             </div>
-            {(p.thumb || p.hero) && (
-              <div className="flex gap-3">
-                {[p.thumb, p.hero].filter(Boolean).map((u) => (
-                  <img key={u} src={u} alt="" className="h-20 w-28 rounded-lg border border-white/10 object-cover" />
-                ))}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Gallery image 1 URL"
+                value={p.gallery?.[0] ?? ''}
+                onChange={(v) => set({ gallery: [v, p.gallery?.[1] ?? ''] })}
+                hint="Full-bleed still — falls back to hero image if left blank"
+              />
+              <Field
+                label="Gallery image 2 URL"
+                value={p.gallery?.[1] ?? ''}
+                onChange={(v) => set({ gallery: [p.gallery?.[0] ?? '', v] })}
+                hint="Detail shot — falls back to thumbnail if left blank"
+              />
+            </div>
+            {(p.thumb || p.hero || p.gallery?.[0] || p.gallery?.[1]) && (
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { url: p.thumb, label: 'Thumb' },
+                  { url: p.hero, label: 'Hero' },
+                  { url: p.gallery?.[0], label: 'Gallery 1' },
+                  { url: p.gallery?.[1], label: 'Gallery 2' },
+                ]
+                  .filter((i) => i.url)
+                  .map((i) => (
+                    <div key={i.label} className="relative">
+                      <img src={i.url} alt="" className="h-20 w-28 rounded-lg border border-white/10 object-cover" />
+                      <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-black/60 py-0.5 text-center font-mono text-[9px] uppercase tracking-wider text-white/70">
+                        {i.label}
+                      </span>
+                    </div>
+                  ))}
               </div>
             )}
+            <Field
+              label="Case study URL"
+              value={p.caseStudyUrl ?? ''}
+              onChange={(v) => set({ caseStudyUrl: v })}
+              hint="Optional — external link (PDF, live site, Notion, etc). Adds a 'Complete case study' button that opens in a new tab."
+            />
           </section>
 
           <section className="grid gap-4 sm:grid-cols-2">

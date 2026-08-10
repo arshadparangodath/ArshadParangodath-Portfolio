@@ -123,6 +123,8 @@ export function emptyProject(): Project {
     category: [],
     thumb: '',
     hero: '',
+    gallery: [],
+    caseStudyUrl: '',
     summary: '',
     accent: '#8b6ad1',
     accentAlt: '#6ad1b0',

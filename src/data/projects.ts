@@ -6,6 +6,18 @@ export interface Project {
   category: string[]
   thumb: string
   hero: string
+  /**
+   * Two extra images shown in the project page's gallery grid (full-bleed
+   * still, then a detail shot). Optional — falls back to `hero`/`thumb` so
+   * older/seed projects that predate this field still render sensibly.
+   */
+  gallery?: string[]
+  /**
+   * Optional external link (e.g. a hosted PDF or a live site) — when set,
+   * shows a "Complete case study" button on the project page that opens it
+   * in a new tab.
+   */
+  caseStudyUrl?: string
   summary: string
   accent: string
   /** Editorial case-study metadata shown at the top of the project page. */
