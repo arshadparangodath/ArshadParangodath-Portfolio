@@ -73,14 +73,18 @@ export function DragScroller({
     return () => cancelAnimationFrame(raf)
   }, [speed, showScrollbar])
 
-  // Attach a non-passive wheel listener so we can prevent default and scroll
-  // the carousel horizontally with the mouse wheel.
+  // Non-passive wheel listener so scrolling with the cursor over the
+  // carousel pans it horizontally — this covers a plain vertical scroll from
+  // a standard mouse wheel (the common case) as well as a horizontal
+  // gesture from a trackpad or shift+wheel. We preventDefault so the event
+  // doesn't also bubble up as a page scroll while it's being used to pan the
+  // carousel — the same convention used by most horizontal-carousel UIs
+  // (Netflix rows, Apple product pages, etc.). The user just needs to move
+  // the cursor off the carousel to keep scrolling the page past it.
   useEffect(() => {
     const el = viewport.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      // Prefer horizontal delta; fall back to vertical so a standard scroll
-      // wheel also pans the carousel left/right.
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
       if (delta === 0) return
       e.preventDefault()
@@ -136,6 +140,7 @@ export function DragScroller({
       <div
         ref={viewport}
         aria-label={label}
+        data-lenis-prevent
         className={`overflow-hidden ${className}`}
         onPointerEnter={() => { if (!noPauseOnHover) paused.current = true }}
         onPointerLeave={() => { paused.current = false }}
