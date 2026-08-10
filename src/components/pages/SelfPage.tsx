@@ -34,12 +34,12 @@ const STORY = [
 ]
 
 const FUN = [
-  'I own more fountain pens than I can reasonably justify.',
-  'I shoot on a 1978 rangefinder and develop at home, badly.',
-  'I cook a decent biryani and an indefensible pasta.',
-  'I can name a typeface from three letters roughly 70% of the time.',
+  'I can spend hours tweaking a design that most people would',
+  'I’m self-taught, so Google, YouTube, and a lot of trial and error have been my teachers.',
+  'I like learning new tools just to see what I can make with them.',
+  'I enjoy travelling, especially when the destination gives me a break from screens.',
   'I run at 5am mostly to be somewhere with no screens.',
-  'My first website was a Geocities page about cricket statistics.',
+  'I love driving — especially when there’s an empty road and nowhere I need to be.',
 ]
 
 const EXPERIENCE = [
@@ -66,55 +66,51 @@ const EXPERIENCE = [
     ],
   },
   {
-    role: 'Interaction Designer',
-    org: 'Studio Field — Bengaluru',
-    period: '2018 — 2020',
+    role: 'Junior Designer',
+    org: 'Tata Consultancy Services — Kochi',
+    period: '2022 — 2024',
     years: '2 yrs',
     points: [
-      'Designed and built product interfaces for early-stage SaaS teams.',
-      'Established the studio’s first component library and accessibility baseline.',
+      'Created presentation decks, reports, and visual assets for client operations and internal teams.',
+      'Supported UI and basic visual design tasks for corporate projects, following established brand and design guidelines.',
+      'Collaborated with team members to prepare client-ready materials and deliver design requirements on time..',
     ],
   },
   {
     role: 'Junior Designer',
-    org: 'Freelance — Kerala',
-    period: '2014 — 2018',
-    years: '4 yrs',
+    org: 'Arbex — Calicut',
+    period: '2021 — 2022',
+    years: '6 mos',
     points: [
-      'Brand identities, print collateral, and small marketing sites for local businesses and musicians.',
-      'Self-taught HTML, CSS, and JavaScript while completing a design degree.',
+      'Created social media creatives, promotional graphics, and digital marketing assets for various client campaigns.',
+      'Assisted with branding, content visuals, and basic design requirements across multiple projects.',
+      'Worked closely with the team to adapt designs for different platforms while learning professional design workflows and client requirements.'
     ],
   },
 ]
 
 const EDUCATION = [
   {
-    title: 'B.Des — Communication Design',
-    org: 'National Institute of Design',
-    period: '2014 — 2018',
-    note: 'Graduated with distinction. Thesis on kinetic typography in digital interfaces.',
+    title: 'B.Sc — Physics',
+    org: 'University Of Calicut',
+    period: '2018 — 2021',
+    note: 'Developed analytical thinking and problem-solving skills that shaped the way I approach design challenges and create thoughtful, structured solutions.',
   },
-  {
-    title: 'Foundation — Visual Arts',
-    org: 'Kerala Institute of Fine Arts',
-    period: '2013 — 2014',
-    note: 'Drawing, colour theory, and printmaking fundamentals.',
-  },
+  
 ]
 
 const CERTIFICATIONS = [
-  { title: 'Advanced WebGL & Shader Programming', org: 'Three.js Journey', year: '2023' },
-  { title: 'Creative Coding with GLSL', org: 'School of Motion', year: '2022' },
-  { title: 'Accessibility for Web Practitioners', org: 'Deque University', year: '2022' },
-  { title: 'Motion Design Fundamentals', org: 'Motion Design School', year: '2021' },
-  { title: 'Google UX Design Professional', org: 'Google / Coursera', year: '2020' },
+  { title: 'Google UX Design Foundation Course', org: 'Google, Coursera', year: '2021' },
+  { title: 'Master Digital Product Design: UX Research & UI Design', org: 'Rob Sutcliffe, Udemy', year: '2022' },
+  { title: 'Design Rules : Principles + Particles for Great UI Design', org: 'Joe Natoli, Udemy', year: '2022' },
+  { title: 'Figma UI/UX Design Essentials', org: 'Daniel Walter Scott', year: '2023' },
 ]
 
 const SKILLS = [
   {
     group: 'Design',
     items: [
-      { name: 'Art direction', level: 92 },
+      { name: 'Visual design', level: 92 },
       { name: 'Typography', level: 95 },
       { name: 'Motion design', level: 90 },
       { name: 'Design systems', level: 88 },
@@ -123,18 +119,17 @@ const SKILLS = [
   {
     group: 'Engineering',
     items: [
-      { name: 'TypeScript / React', level: 94 },
-      { name: 'Three.js / WebGL', level: 89 },
-      { name: 'GLSL shaders', level: 78 },
-      { name: 'Performance tuning', level: 86 },
+      { name: 'HTML', level: 70 },
+      { name: 'CSS', level: 60 },
+      { name: 'Code Understanding', level: 78 },
     ],
   },
 ]
 
 const TOOLBOX = [
-  'Figma', 'Blender', 'After Effects', 'React', 'Next.js', 'TypeScript',
-  'Three.js', 'React Three Fiber', 'GSAP', 'GLSL', 'Tailwind', 'Framer Motion',
-  'Node.js', 'Vite', 'Git', 'Spline',
+  'Figma', 'Photoshop', 'After Effects', 'Framer Motion', 'Illustrator', 'Spline',
+  'Davinci Resolve', 'HTML', 'CSS', 'Lottie', 'Git', 'Slack',
+  'Notion', 'Teams',,
 ]
 
 const LANGUAGES = [
@@ -347,11 +342,10 @@ export function SelfPage({ onNavigate }: { onNavigate: (r: Route) => void }) {
             >
               Get in touch
             </button>
-            <a
-              href={`mailto:${EMAIL}?subject=${encodeURIComponent('Résumé request')}`}
-              className="rounded-full border border-[#f3ece0]/25 px-8 py-3.5 text-xs font-medium uppercase tracking-[0.2em] text-[#f3ece0]/80 transition hover:border-[#f3ece0]/60 hover:text-[#f3ece0]"
-            >
-              Request full CV
+            <a href="https://drive.google.com/file/d/1woswIkSy4efrU4wC3GUbfaWO0U-xWqss/view?usp=sharing" 
+            target="_blank"  rel="noopener noreferrer"  
+            className="rounded-full border border-[#f3ece0]/25 px-8 py-3.5 text-xs font-medium uppercase tracking-[0.2em] text-[#f3ece0]/80 transition hover:border-[#f3ece0]/60 hover:text-[#f3ece0]">
+              View full CV
             </a>
           </div>
         </Reveal>
