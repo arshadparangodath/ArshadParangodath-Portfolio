@@ -435,7 +435,7 @@ function SelfHero() {
       {/* full-screen B&W photo */}
       <img
         ref={imgRef}
-        src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1400&h=900&fit=crop&auto=format&q=85"
+        src="https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/Hero%20Image/HeroImage.webp"
         alt=""
         aria-hidden
         className="absolute inset-0 h-full w-full object-cover"
