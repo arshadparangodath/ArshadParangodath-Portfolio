@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ProjectAdmin } from './ProjectAdmin'
+import { pauseLenis, resumeLenis } from '../../lib/lenisController'
 
 const USER = 'ArshadPrg'
 const PASS = 'Winter@123'
@@ -14,6 +15,15 @@ export function AdminGate({ onClose }: { onClose: () => void }) {
   const [pass, setPass] = useState('')
   const [error, setError] = useState(false)
   const [unlocked, setUnlocked] = useState(false)
+
+  // Both the login form and the CMS panel below are fixed full-screen
+  // overlays with their own scroll areas — same reasoning as ProjectDetail:
+  // pause the global Lenis smooth-scroll so it doesn't fight the panel's own
+  // scrolling for as long as this is mounted.
+  useEffect(() => {
+    pauseLenis()
+    return () => resumeLenis()
+  }, [])
 
   if (unlocked) return <ProjectAdmin onClose={onClose} />
 

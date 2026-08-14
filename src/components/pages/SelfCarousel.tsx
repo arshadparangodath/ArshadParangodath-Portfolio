@@ -8,12 +8,13 @@ import { useRef } from 'react'
  */
 
 const SHOTS = [
-  { src: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=700&h=900&fit=crop&auto=format&q=80', caption: 'Studio, 6am — the only quiet hour', year: '2024' },
-  { src: 'https://images.unsplash.com/photo-1521119989659-a83eee488004?w=700&h=900&fit=crop&auto=format&q=80', caption: 'Sketchbook before software, always', year: '2023' },
-  { src: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=700&h=900&fit=crop&auto=format&q=80', caption: 'Workshop week in Bengaluru', year: '2023' },
-  { src: 'https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?w=700&h=900&fit=crop&auto=format&q=80', caption: 'Talking type at a meet-up', year: '2022' },
-  { src: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=700&h=900&fit=crop&auto=format&q=80', caption: 'Coast road, camera in the bag', year: '2022' },
-  { src: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=700&h=900&fit=crop&auto=format&q=80', caption: 'Late review, better coffee', year: '2021' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages1.webp', caption: 'Favourites first colleagues of my career 🫶🏽🤩', year: '2021' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages2.webp', caption: 'Table Tennis addict for always 🏓', year: '2024' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages3.webp', caption: 'First day at a corporate; TCS Kochi 🏢🧑‍💼', year: '2022' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages4.webp', caption: 'Biggest strength of my life, my parents 🫂', year: '2024' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages5.webp', caption: 'With celebrities, but from wax museum😁🫣', year: '2022' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages6.webp', caption: 'Rides through the Himalayas on the Himalayan 🏔️🏍️', year: '2026' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages7.webp', caption: 'Me & My beloved ❤️👩‍❤️‍💋‍👨', year: '2025' },
 ]
 
 export function SelfCarousel({ accent }: { accent: string }) {

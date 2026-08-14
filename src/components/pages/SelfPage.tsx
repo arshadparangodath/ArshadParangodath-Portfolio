@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { playSfx } from '../../audio/audio'
 import { EMAIL, type Route } from './routes'
 import { Reveal } from './motion'
@@ -6,7 +7,6 @@ import { SelfCarousel } from './SelfCarousel'
 import { SiteFooter } from './SiteFooter'
 import { BottomNav } from '../ui/BottomNav'
 import { SiteHeader } from '../ui/SiteHeader'
-import { AdminGate } from '../admin/AdminGate'
 
 /**
  * Self is the story behind the work — where I came from, how I think, and the
@@ -142,7 +142,7 @@ const LANGUAGES = [
 const AMBER = '#c8f135'
 
 export function SelfPage({ onNavigate }: { onNavigate: (r: Route) => void }) {
-  const [cmsOpen, setCmsOpen] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div className="relative min-h-screen bg-black text-[#f3ece0]">
@@ -355,7 +355,7 @@ export function SelfPage({ onNavigate }: { onNavigate: (r: Route) => void }) {
         {/* Discreet entry to the content manager, credentials required. */}
         <div className="flex justify-end px-6 pt-8 sm:px-12 lg:px-16">
           <button
-            onClick={() => setCmsOpen(true)}
+            onClick={() => navigate('/admin')}
             aria-label="Content manager"
             className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/[0.14] transition hover:text-white/50"
           >
@@ -364,7 +364,6 @@ export function SelfPage({ onNavigate }: { onNavigate: (r: Route) => void }) {
         </div>
       </SiteFooter>
 
-      {cmsOpen && <AdminGate onClose={() => setCmsOpen(false)} />}
       <SiteHeader onNavigate={onNavigate} />
       <BottomNav active="self" onNavigate={onNavigate} />
     </div>
