@@ -8,7 +8,7 @@ import { useRef } from 'react'
  */
 
 const SHOTS = [
-  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages1.webp', caption: 'Favourites first colleagues of my career 🫶🏽🤩', year: '2021' },
+  { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages1.webp', caption: ' first colleagues of my career 🫶🏽🤩', year: '2021' },
   { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages2.webp', caption: 'Table Tennis addict for always 🏓', year: '2024' },
   { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages3.webp', caption: 'First day at a corporate; TCS Kochi 🏢🧑‍💼', year: '2022' },
   { src: 'https://o6m2vvipwxhd7vm3.public.blob.vercel-storage.com/Assets/Self%20Section/FunStories%20Carousel/Self_CarouselImages4.webp', caption: 'Biggest strength of my life, my parents 🫂', year: '2024' },
