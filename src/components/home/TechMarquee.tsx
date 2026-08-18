@@ -60,17 +60,16 @@ export function TechMarquee() {
             {TECH_ICONS.map((icon) => (
               <span
                 key={icon.name}
-                className="px-9 text-white/50 transition-colors duration-300 hover:text-white"
+                className="group px-9"
                 title={icon.name}
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  role="img"
-                  aria-label={icon.name}
-                  className="h-9 w-9 sm:h-11 sm:w-11"
-                >
-                  {icon.glyph}
-                </svg>
+                <img
+                  src={icon.src}
+                  alt={icon.name}
+                  loading="lazy"
+                  draggable={false}
+                  className="h-9 w-9 object-contain opacity-55 grayscale transition-all duration-300 group-hover:opacity-100 group-hover:grayscale-0 sm:h-11 sm:w-11"
+                />
               </span>
             ))}
           </div>
