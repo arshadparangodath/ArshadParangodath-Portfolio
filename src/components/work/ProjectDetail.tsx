@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { playSfx } from '../../audio/audio'
-import { pauseLenis, resumeLenis } from '../../lib/lenisController'
 import type { Project } from '../../data/projects'
 
 interface ProjectDetailProps {
@@ -83,23 +82,8 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // The page behind this overlay is `position: fixed`, so it's invisible but
-  // still "there" — without this, the global Lenis smooth-scroll keeps
-  // capturing the mouse wheel and applies it to that hidden background page
-  // instead of this modal's own scroll container. Pausing Lenis for the
-  // lifetime of this component fixes that.
-  //
-  // Deliberately NOT also locking body scroll (e.g. `body.style.overflow =
-  // 'hidden'`) here — that combination (a hidden-overflow body plus a fixed,
-  // independently-scrolling modal) is a well-known trap on mobile Safari/
-  // Chrome that can freeze scrolling on *both* the body and the modal's own
-  // scroll container, and doesn't always cleanly recover when toggled back
-  // on close. It's also unnecessary: the modal already fully covers the
-  // viewport, so there's nothing for the user to see or scroll behind it.
-  useEffect(() => {
-    pauseLenis()
-    return () => resumeLenis()
-  }, [])
+  // Lets the browser scroll this modal's own overflow-y-auto container
+  // natively — see data-lenis-prevent on the root element below.
 
   return (
     <div
@@ -107,6 +91,7 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
       role="dialog"
       aria-modal="true"
       aria-label={`${project.title} — project detail`}
+      data-lenis-prevent
       className="fixed inset-0 z-50 overflow-y-auto"
       style={{ backgroundColor: '#05060a' }}
     >

@@ -275,7 +275,7 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col bg-[#06070c]">
+    <div data-lenis-prevent className="fixed inset-0 z-[90] flex flex-col bg-[#06070c]">
       {/* Grid atmosphere matching home page */}
       <div
         className="pointer-events-none absolute inset-0 z-0"

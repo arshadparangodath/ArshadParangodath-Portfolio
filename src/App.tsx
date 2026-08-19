@@ -10,7 +10,6 @@ import { AdminGate } from './components/admin/AdminGate'
 import { Cursor } from './components/ui/Cursor'
 import { Preloader } from './components/ui/Preloader'
 import { useReducedMotion } from './hooks/useReducedMotion'
-import { setLenisInstance } from './lib/lenisController'
 
 /** Reverse-lookup of ROUTE_PATHS, used to know when Lenis should be disabled. */
 const PATH_TO_ROUTE: Record<string, Route> = Object.fromEntries(
@@ -30,7 +29,6 @@ export default function App() {
   useEffect(() => {
     if (reducedMotion || route === 'works') return
     const lenis = new Lenis({ lerp: 0.1, smoothWheel: true })
-    setLenisInstance(lenis)
     let raf = 0
     const loop = (time: number) => {
       lenis.raf(time)
@@ -39,7 +37,6 @@ export default function App() {
     raf = requestAnimationFrame(loop)
     return () => {
       cancelAnimationFrame(raf)
-      setLenisInstance(null)
       lenis.destroy()
     }
   }, [reducedMotion, route])
