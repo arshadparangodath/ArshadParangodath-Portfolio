@@ -7,7 +7,7 @@ import { useProjects } from '../../hooks/useProjects'
 import { ProjectCard } from './ProjectCard'
 
 const FRICTION = 0.94
-const DRAG = 0.011 // px → surface units
+const DRAG = 0.04 // px → surface units
 const MAX_VEL = 0.28
 
 interface CardSphereProps {
