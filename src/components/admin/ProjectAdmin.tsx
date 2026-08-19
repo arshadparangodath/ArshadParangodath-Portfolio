@@ -9,7 +9,7 @@ import {
   resetProjects,
   saveProject,
 } from '../../data/projectStore'
-import { useProjects } from '../../hooks/useProjects'
+import { useProjects, useProjectsLoaded } from '../../hooks/useProjects'
 
 const listToText = (v: string[]) => v.join(', ')
 const textToList = (v: string) =>
@@ -79,16 +79,24 @@ function Editor({
   onCancel: () => void
 }) {
   const [p, setP] = useState<Project>(() => structuredClone(initial))
+  const [saving, setSaving] = useState(false)
   const locked = initial.id !== ''
   const set = (patch: Partial<Project>) => setP((c) => ({ ...c, ...patch }))
   const setMeta = (patch: Partial<Project['meta']>) =>
     setP((c) => ({ ...c, meta: { ...c.meta, ...patch } }))
 
-  const save = () => {
+  const save = async () => {
     const id = p.id || slugify(p.title)
     if (!id || !p.title.trim()) return
-    saveProject({ ...p, id, year: Number(p.year) || new Date().getFullYear() })
-    onDone()
+    setSaving(true)
+    try {
+      await saveProject({ ...p, id, year: Number(p.year) || new Date().getFullYear() })
+      onDone()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not save — check your connection and try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -101,9 +109,10 @@ function Editor({
         <div className="flex gap-2">
           <button
             onClick={save}
-            className="rounded-full bg-white px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-black transition hover:bg-white/85"
+            disabled={saving}
+            className="rounded-full bg-white px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-black transition hover:bg-white/85 disabled:opacity-50"
           >
-            Save
+            {saving ? 'Saving…' : 'Save'}
           </button>
           <button
             onClick={onCancel}
@@ -230,9 +239,12 @@ const ALL_FILTER = 'all'
 
 export function ProjectAdmin({ onClose }: { onClose: () => void }) {
   const projects = useProjects()
+  const synced = useProjectsLoaded()
   const [editing, setEditing] = useState<Project | null>(null)
   const [query, setQuery] = useState('')
   const [collectionFilter, setCollectionFilter] = useState<string>(ALL_FILTER)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
   const file = useRef<HTMLInputElement>(null)
 
   const rows = useMemo(() => {
@@ -257,13 +269,41 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
     URL.revokeObjectURL(a.href)
   }
 
+  const remove = async (p: Project) => {
+    if (!confirm(`Delete "${p.title}"?`)) return
+    setBusyId(p.id)
+    try {
+      await deleteProject(p.id)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not delete — check your connection and try again.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const reset = async () => {
+    if (!confirm('Discard all CMS changes and restore the original projects?')) return
+    setResetting(true)
+    try {
+      await resetProjects()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not reset — check your connection and try again.')
+    } finally {
+      setResetting(false)
+    }
+  }
+
   const upload = (f: File) => {
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        importJSON(String(reader.result))
-      } catch {
-        alert('That file could not be read as project data.')
+        await importJSON(String(reader.result))
+      } catch (err) {
+        alert(
+          err instanceof Error
+            ? err.message
+            : 'That file could not be read as project data — expecting a JSON array of projects.',
+        )
       }
     }
     reader.readAsText(f)
@@ -294,6 +334,13 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
             <h2 className="font-display text-xl font-light tracking-tight text-white">Project database</h2>
             <span className="rounded bg-white/8 px-2 py-0.5 font-mono text-[10px] text-white/40">
               {projects.length} projects
+            </span>
+            <span
+              className={`rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] ${
+                synced ? 'bg-emerald-400/10 text-emerald-300/70' : 'bg-amber-400/10 text-amber-300/70'
+              }`}
+            >
+              {synced ? 'Synced' : 'Loading…'}
             </span>
           </div>
           <button
@@ -351,14 +398,11 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
                 onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
               />
               <button
-                onClick={() => {
-                  if (confirm('Discard all CMS changes and restore the original projects?')) {
-                    resetProjects()
-                  }
-                }}
-                className="rounded-full border border-red-400/30 px-4 py-2 text-xs uppercase tracking-[0.18em] text-red-300/80 transition hover:text-red-200"
+                onClick={reset}
+                disabled={resetting}
+                className="rounded-full border border-red-400/30 px-4 py-2 text-xs uppercase tracking-[0.18em] text-red-300/80 transition hover:text-red-200 disabled:opacity-50"
               >
-                Reset
+                {resetting ? 'Resetting…' : 'Reset'}
               </button>
             </div>
 
@@ -438,15 +482,17 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => setEditing(p)}
-                        className="text-xs uppercase tracking-[0.15em] text-white/60 transition hover:text-white"
+                        disabled={busyId === p.id}
+                        className="text-xs uppercase tracking-[0.15em] text-white/60 transition hover:text-white disabled:opacity-40"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => confirm(`Delete "${p.title}"?`) && deleteProject(p.id)}
-                        className="ml-4 text-xs uppercase tracking-[0.15em] text-red-300/60 transition hover:text-red-200"
+                        onClick={() => remove(p)}
+                        disabled={busyId === p.id}
+                        className="ml-4 text-xs uppercase tracking-[0.15em] text-red-300/60 transition hover:text-red-200 disabled:opacity-40"
                       >
-                        Delete
+                        {busyId === p.id ? 'Deleting…' : 'Delete'}
                       </button>
                     </td>
                   </tr>

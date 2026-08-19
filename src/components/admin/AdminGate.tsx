@@ -1,26 +1,45 @@
 import { useState } from 'react'
 import { ProjectAdmin } from './ProjectAdmin'
-
-const USER = 'ArshadPrg'
-const PASS = 'Winter@123'
+import { setAdminToken } from '../../lib/adminAuth'
 
 /**
- * Credential prompt in front of the content manager. This is a convenience lock
- * on a client-side app, not real security — anyone can read the bundle — so it
- * only keeps the panel out of the way of ordinary visitors.
+ * Credential prompt in front of the content manager. Verification now happens
+ * server-side (see /api/admin-login) against ADMIN_USER/ADMIN_PASS
+ * environment variables — the real credentials no longer live inside the
+ * shipped client bundle the way they used to.
  */
 export function AdminGate({ onClose }: { onClose: () => void }) {
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [error, setError] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [unlocked, setUnlocked] = useState(false)
 
   if (unlocked) return <ProjectAdmin onClose={onClose} />
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (user === USER && pass === PASS) setUnlocked(true)
-    else setError(true)
+    setSubmitting(true)
+    setError(false)
+    try {
+      const res = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, pass }),
+      })
+      if (res.ok) {
+        // Reused as the write-auth token for saves/deletes — see
+        // src/lib/adminAuth.ts. Held in memory only, never persisted.
+        setAdminToken(pass)
+        setUnlocked(true)
+      } else {
+        setError(true)
+      }
+    } catch {
+      setError(true)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -75,9 +94,10 @@ export function AdminGate({ onClose }: { onClose: () => void }) {
         <div className="mt-9 flex items-center gap-3">
           <button
             type="submit"
-            className="rounded-full bg-white px-7 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-white/85"
+            disabled={submitting}
+            className="rounded-full bg-white px-7 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-white/85 disabled:opacity-50"
           >
-            Unlock
+            {submitting ? 'Checking…' : 'Unlock'}
           </button>
           <button
             type="button"
