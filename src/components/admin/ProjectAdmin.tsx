@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { COLLECTIONS, type Collection, type Project } from '../../data/projects'
+import { MEDIA_TYPES, MEDIA_TYPE_HINTS, MEDIA_TYPE_LABELS, normalizeGallery, type MediaItem, type MediaType } from '../../data/media'
 import {
   deleteProject,
   emptyProject,
@@ -66,6 +67,124 @@ function Area({
         className="mt-1.5 w-full resize-y rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-white/45"
       />
     </label>
+  )
+}
+
+/**
+ * Manages the project page's gallery section: any number of items, each its
+ * own media type (image, GIF, video, Figma prototype, or other embed), with
+ * captions and reordering. Replaces the old fixed "gallery image 1/2" fields.
+ */
+function GalleryEditor({
+  items,
+  onChange,
+}: {
+  items: MediaItem[]
+  onChange: (items: MediaItem[]) => void
+}) {
+  const update = (i: number, patch: Partial<MediaItem>) =>
+    onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i))
+  const add = () => onChange([...items, { type: 'image', url: '', caption: '' }])
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= items.length) return
+    const next = [...items]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    onChange(next)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
+          Gallery — images, GIFs, video, Figma prototypes, embeds
+        </span>
+        <button
+          type="button"
+          onClick={add}
+          className="rounded-full border border-white/20 px-3 py-1 text-[11px] uppercase tracking-[0.15em] text-white/70 transition hover:border-white/45 hover:text-white"
+        >
+          + Add media
+        </button>
+      </div>
+
+      {items.length === 0 && (
+        <p className="mt-2 text-[11px] text-white/35">
+          None yet — the project page falls back to showing the hero and thumbnail images.
+        </p>
+      )}
+
+      <div className="mt-3 space-y-3">
+        {items.map((item, i) => (
+          <div key={i} className="rounded-lg border border-white/12 bg-white/[0.03] p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={item.type}
+                onChange={(e) => update(i, { type: e.target.value as MediaType })}
+                className="rounded-md border border-white/15 bg-[#0b0d13] px-2 py-1.5 text-xs text-white outline-none focus:border-white/45"
+              >
+                {MEDIA_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {MEDIA_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => move(i, -1)}
+                  disabled={i === 0}
+                  aria-label="Move up"
+                  className="rounded px-2 py-1 text-xs text-white/50 transition hover:text-white disabled:opacity-25"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(i, 1)}
+                  disabled={i === items.length - 1}
+                  aria-label="Move down"
+                  className="rounded px-2 py-1 text-xs text-white/50 transition hover:text-white disabled:opacity-25"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className="ml-1 rounded px-2 py-1 text-xs uppercase tracking-wide text-red-300/70 transition hover:text-red-200"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <input
+              value={item.url}
+              onChange={(e) => update(i, { url: e.target.value })}
+              placeholder="https://…"
+              className="mt-2 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-white/45"
+            />
+            <span className="mt-1 block text-[10px] text-white/30">{MEDIA_TYPE_HINTS[item.type]}</span>
+
+            <input
+              value={item.caption ?? ''}
+              onChange={(e) => update(i, { caption: e.target.value })}
+              placeholder="Caption (optional)"
+              className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white/80 outline-none transition focus:border-white/35"
+            />
+
+            {item.url && (item.type === 'image' || item.type === 'gif') && (
+              <img src={item.url} alt="" className="mt-2 h-16 w-24 rounded-md border border-white/10 object-cover" />
+            )}
+            {item.url && item.type === 'video' && (
+              <video src={item.url} muted className="mt-2 h-16 w-24 rounded-md border border-white/10 object-cover" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -176,27 +295,11 @@ function Editor({
               <Field label="Thumbnail URL" value={p.thumb} onChange={(v) => set({ thumb: v })} hint="3D card" />
               <Field label="Hero image URL" value={p.hero} onChange={(v) => set({ hero: v })} hint="Project page — main image" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Gallery image 1 URL"
-                value={p.gallery?.[0] ?? ''}
-                onChange={(v) => set({ gallery: [v, p.gallery?.[1] ?? ''] })}
-                hint="Full-bleed still — falls back to hero image if left blank"
-              />
-              <Field
-                label="Gallery image 2 URL"
-                value={p.gallery?.[1] ?? ''}
-                onChange={(v) => set({ gallery: [p.gallery?.[0] ?? '', v] })}
-                hint="Detail shot — falls back to thumbnail if left blank"
-              />
-            </div>
-            {(p.thumb || p.hero || p.gallery?.[0] || p.gallery?.[1]) && (
+            {(p.thumb || p.hero) && (
               <div className="flex flex-wrap gap-3">
                 {[
                   { url: p.thumb, label: 'Thumb' },
                   { url: p.hero, label: 'Hero' },
-                  { url: p.gallery?.[0], label: 'Gallery 1' },
-                  { url: p.gallery?.[1], label: 'Gallery 2' },
                 ]
                   .filter((i) => i.url)
                   .map((i) => (
@@ -214,6 +317,10 @@ function Editor({
               value={p.caseStudyUrl ?? ''}
               onChange={(v) => set({ caseStudyUrl: v })}
               hint="Optional — external link (PDF, live site, Notion, etc). Adds a 'Complete case study' button that opens in a new tab."
+            />
+            <GalleryEditor
+              items={normalizeGallery(p.gallery)}
+              onChange={(gallery) => set({ gallery })}
             />
           </section>
 

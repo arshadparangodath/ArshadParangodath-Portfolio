@@ -1,3 +1,5 @@
+import type { MediaItem } from './media'
+
 export interface Project {
   id: string
   title: string
@@ -7,11 +9,12 @@ export interface Project {
   thumb: string
   hero: string
   /**
-   * Two extra images shown in the project page's gallery grid (full-bleed
-   * still, then a detail shot). Optional — falls back to `hero`/`thumb` so
+   * Extra media shown in the project page's gallery section — any mix of
+   * images, GIFs, videos, Figma prototypes, or other embeds, in any
+   * quantity. Falls back to `hero`/`thumb` as a two-image gallery so
    * older/seed projects that predate this field still render sensibly.
    */
-  gallery?: string[]
+  gallery?: MediaItem[]
   /**
    * Optional external link (e.g. a hosted PDF or a live site) — when set,
    * shows a "Complete case study" button on the project page that opens it

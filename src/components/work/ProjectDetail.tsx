@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import gsap from 'gsap'
 import { playSfx } from '../../audio/audio'
+import { figmaEmbedSrc, normalizeGallery, type MediaItem } from '../../data/media'
 import type { Project } from '../../data/projects'
 
 interface ProjectDetailProps {
@@ -20,11 +21,81 @@ function Meta({ label, value }: { label: string; value: string }) {
   )
 }
 
+/** Renders one gallery entry according to its media type. */
+function MediaBlock({ item, title }: { item: MediaItem; title: string }) {
+  const frame = 'w-full overflow-hidden rounded-xl border border-white/10 bg-black/40'
+
+  let content: React.ReactNode
+  switch (item.type) {
+    case 'video':
+      content = (
+        <video
+          src={item.url}
+          className="aspect-video w-full bg-black object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          controls
+        />
+      )
+      break
+    case 'figma':
+      content = (
+        <iframe
+          src={figmaEmbedSrc(item.url)}
+          className="h-[560px] w-full sm:h-[640px]"
+          allow="fullscreen"
+          title={`${title} — Figma prototype`}
+        />
+      )
+      break
+    case 'iframe':
+      content = (
+        <iframe
+          src={item.url}
+          className="h-[560px] w-full sm:h-[640px]"
+          allow="fullscreen; autoplay; encrypted-media"
+          title={`${title} — embed`}
+        />
+      )
+      break
+    case 'gif':
+    case 'image':
+    default:
+      content = (
+        <img
+          src={item.url}
+          alt={item.caption || title}
+          loading="lazy"
+          className="w-full object-cover"
+        />
+      )
+  }
+
+  return (
+    <div data-reveal className={frame}>
+      {content}
+      {item.caption && (
+        <p className="border-t border-white/10 px-5 py-3 text-sm text-white/60">{item.caption}</p>
+      )}
+    </div>
+  )
+}
+
 export function ProjectDetail({ project, reducedMotion, onClose, onNext }: ProjectDetailProps) {
   const root = useRef<HTMLDivElement>(null)
   const hero = useRef<HTMLDivElement>(null)
   const closing = useRef(false)
   const { meta, accent, accentAlt } = project
+
+  const galleryItems = useMemo(() => {
+    const items = normalizeGallery(project.gallery)
+    if (items.length > 0) return items
+    return ([{ type: 'image', url: project.hero }, { type: 'image', url: project.thumb }] as MediaItem[]).filter(
+      (m) => m.url,
+    )
+  }, [project])
 
   // Cinematic entrance — the hero expands out of the gallery card so the
   // transition reads as entering the project rather than loading a page.
@@ -222,30 +293,18 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
         </div>
 
         {/* --- gallery --- */}
-        <div className="mt-16 grid gap-4 sm:grid-cols-2">
-          <div data-reveal className="aspect-[4/3] overflow-hidden rounded-xl border border-white/10 sm:col-span-2">
-            <img
-              src={project.gallery?.[0] || project.hero}
-              alt={`${project.title} — full-bleed still`}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div data-reveal className="aspect-[4/3] overflow-hidden rounded-xl border border-white/10">
-            <img
-              src={project.gallery?.[1] || project.thumb}
-              alt={`${project.title} — detail`}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          </div>
+        <div className="mt-16 space-y-6">
+          {galleryItems.map((item, i) => (
+            <MediaBlock key={`${item.type}-${item.url}-${i}`} item={item} title={project.title} />
+          ))}
+
           <div
             data-reveal
-            className="flex aspect-[4/3] flex-col justify-end rounded-xl border border-white/12 p-6"
+            className="flex flex-col justify-end rounded-xl border border-white/12 p-8"
             style={{ background: `linear-gradient(160deg, ${accent}33, ${accentAlt}11 60%, transparent)` }}
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/45">Outcome</p>
-            <p className="mt-3 text-lg leading-relaxed text-white/85">
+            <p className="mt-3 max-w-2xl text-lg leading-relaxed text-white/85">
               Launched to a global audience with zero jank
               {meta.awards.length > 0 ? `, ${meta.awards[0]},` : ','} and a measurable lift in
               time-on-page for {project.client}.
