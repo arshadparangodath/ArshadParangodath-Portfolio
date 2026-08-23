@@ -1,6 +1,15 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { COLLECTIONS, type Collection, type Project } from '../../data/projects'
-import { MEDIA_TYPES, MEDIA_TYPE_HINTS, MEDIA_TYPE_LABELS, normalizeGallery, type MediaItem, type MediaType } from '../../data/media'
+import {
+  COVER_ELIGIBLE_TYPES,
+  MEDIA_TYPES,
+  MEDIA_TYPE_HINTS,
+  MEDIA_TYPE_LABELS,
+  getCoverMedia,
+  normalizeGallery,
+  type MediaItem,
+  type MediaType,
+} from '../../data/media'
 import {
   deleteProject,
   emptyProject,
@@ -18,6 +27,46 @@ const textToList = (v: string) =>
 
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+/** A styled yes/no confirmation, used for unsaved-changes warnings. */
+function ConfirmDialog({
+  title,
+  body,
+  confirmLabel = 'Discard changes',
+  cancelLabel = 'Keep editing',
+  onConfirm,
+  onCancel,
+}: {
+  title: string
+  body: string
+  confirmLabel?: string
+  cancelLabel?: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0b0d13] p-7">
+        <h3 className="font-display text-lg font-light text-white">{title}</h3>
+        <p className="mt-2.5 text-sm leading-relaxed text-white/60">{body}</p>
+        <div className="mt-7 flex justify-end gap-2.5">
+          <button
+            onClick={onCancel}
+            className="rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.15em] text-white/70 transition hover:text-white"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="rounded-full bg-red-400/90 px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] text-black transition hover:bg-red-300"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Field({
   label,
@@ -71,9 +120,11 @@ function Area({
 }
 
 /**
- * Manages the project page's gallery section: any number of items, each its
- * own media type (image, GIF, video, Figma prototype, or other embed), with
- * captions and reordering. Replaces the old fixed "gallery image 1/2" fields.
+ * Manages the project's full media list: any number of items, each its own
+ * type (image, GIF, video, Figma prototype, or other embed), with captions,
+ * reordering, and one item flagged as the cover — which doubles as the 3D
+ * card thumbnail, Home page preview, and project page hero, so there's only
+ * ever one thumbnail/hero image to manage instead of three separate fields.
  */
 function GalleryEditor({
   items,
@@ -93,12 +144,16 @@ function GalleryEditor({
     ;[next[i], next[j]] = [next[j], next[i]]
     onChange(next)
   }
+  const setCover = (i: number) =>
+    onChange(items.map((it, idx) => ({ ...it, isCover: idx === i })))
+
+  const hasExplicitCover = items.some((it) => it.isCover)
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
-          Gallery — images, GIFs, video, Figma prototypes, embeds
+          Media — images, GIFs, video, Figma prototypes, embeds
         </span>
         <button
           type="button"
@@ -111,78 +166,106 @@ function GalleryEditor({
 
       {items.length === 0 && (
         <p className="mt-2 text-[11px] text-white/35">
-          None yet — the project page falls back to showing the hero and thumbnail images.
+          None yet — add at least one to use as the thumbnail/cover/hero.
+        </p>
+      )}
+      {items.length > 0 && !hasExplicitCover && (
+        <p className="mt-2 text-[11px] text-amber-300/60">
+          No cover chosen yet — the first image/GIF/video below is being used by default.
         </p>
       )}
 
       <div className="mt-3 space-y-3">
-        {items.map((item, i) => (
-          <div key={i} className="rounded-lg border border-white/12 bg-white/[0.03] p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={item.type}
-                onChange={(e) => update(i, { type: e.target.value as MediaType })}
-                className="rounded-md border border-white/15 bg-[#0b0d13] px-2 py-1.5 text-xs text-white outline-none focus:border-white/45"
-              >
-                {MEDIA_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {MEDIA_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
+        {items.map((item, i) => {
+          const eligible = COVER_ELIGIBLE_TYPES.includes(item.type)
+          return (
+            <div
+              key={i}
+              className={`rounded-lg border p-3 transition ${
+                item.isCover ? 'border-emerald-400/50 bg-emerald-400/[0.05]' : 'border-white/12 bg-white/[0.03]'
+              }`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={item.type}
+                  onChange={(e) => update(i, { type: e.target.value as MediaType, isCover: eligible ? item.isCover : false })}
+                  className="rounded-md border border-white/15 bg-[#0b0d13] px-2 py-1.5 text-xs text-white outline-none focus:border-white/45"
+                >
+                  {MEDIA_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {MEDIA_TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
 
-              <div className="ml-auto flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => move(i, -1)}
-                  disabled={i === 0}
-                  aria-label="Move up"
-                  className="rounded px-2 py-1 text-xs text-white/50 transition hover:text-white disabled:opacity-25"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(i, 1)}
-                  disabled={i === items.length - 1}
-                  aria-label="Move down"
-                  className="rounded px-2 py-1 text-xs text-white/50 transition hover:text-white disabled:opacity-25"
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  onClick={() => remove(i)}
-                  className="ml-1 rounded px-2 py-1 text-xs uppercase tracking-wide text-red-300/70 transition hover:text-red-200"
-                >
-                  Remove
-                </button>
+                {eligible && (
+                  <button
+                    type="button"
+                    onClick={() => setCover(i)}
+                    disabled={!!item.isCover}
+                    className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.12em] transition ${
+                      item.isCover
+                        ? 'bg-emerald-400/20 text-emerald-300'
+                        : 'border border-white/20 text-white/60 hover:border-white/45 hover:text-white'
+                    }`}
+                  >
+                    {item.isCover ? '★ Cover' : 'Set as cover'}
+                  </button>
+                )}
+
+                <div className="ml-auto flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => move(i, -1)}
+                    disabled={i === 0}
+                    aria-label="Move up"
+                    className="rounded px-2 py-1 text-xs text-white/50 transition hover:text-white disabled:opacity-25"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(i, 1)}
+                    disabled={i === items.length - 1}
+                    aria-label="Move down"
+                    className="rounded px-2 py-1 text-xs text-white/50 transition hover:text-white disabled:opacity-25"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove(i)}
+                    className="ml-1 rounded px-2 py-1 text-xs uppercase tracking-wide text-red-300/70 transition hover:text-red-200"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
+
+              <input
+                value={item.url}
+                onChange={(e) => update(i, { url: e.target.value })}
+                placeholder="https://…"
+                className="mt-2 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-white/45"
+              />
+              <span className="mt-1 block text-[10px] text-white/30">{MEDIA_TYPE_HINTS[item.type]}</span>
+
+              <input
+                value={item.caption ?? ''}
+                onChange={(e) => update(i, { caption: e.target.value })}
+                placeholder="Caption (optional)"
+                className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white/80 outline-none transition focus:border-white/35"
+              />
+
+              {item.url && (item.type === 'image' || item.type === 'gif') && (
+                <img src={item.url} alt="" className="mt-2 h-16 w-24 rounded-md border border-white/10 object-cover" />
+              )}
+              {item.url && item.type === 'video' && (
+                <video src={item.url} muted className="mt-2 h-16 w-24 rounded-md border border-white/10 object-cover" />
+              )}
             </div>
-
-            <input
-              value={item.url}
-              onChange={(e) => update(i, { url: e.target.value })}
-              placeholder="https://…"
-              className="mt-2 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-white/45"
-            />
-            <span className="mt-1 block text-[10px] text-white/30">{MEDIA_TYPE_HINTS[item.type]}</span>
-
-            <input
-              value={item.caption ?? ''}
-              onChange={(e) => update(i, { caption: e.target.value })}
-              placeholder="Caption (optional)"
-              className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-white/80 outline-none transition focus:border-white/35"
-            />
-
-            {item.url && (item.type === 'image' || item.type === 'gif') && (
-              <img src={item.url} alt="" className="mt-2 h-16 w-24 rounded-md border border-white/10 object-cover" />
-            )}
-            {item.url && item.type === 'video' && (
-              <video src={item.url} muted className="mt-2 h-16 w-24 rounded-md border border-white/10 object-cover" />
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -192,14 +275,25 @@ function Editor({
   initial,
   onDone,
   onCancel,
+  onDirtyChange,
 }: {
   initial: Project
   onDone: () => void
   onCancel: () => void
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   const [p, setP] = useState<Project>(() => structuredClone(initial))
   const [saving, setSaving] = useState(false)
+  const [confirmingClose, setConfirmingClose] = useState(false)
   const locked = initial.id !== ''
+  const dirty = useMemo(() => JSON.stringify(p) !== JSON.stringify(initial), [p, initial])
+
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+    return () => onDirtyChange?.(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty])
+
   const set = (patch: Partial<Project>) => setP((c) => ({ ...c, ...patch }))
   const setMeta = (patch: Partial<Project['meta']>) =>
     setP((c) => ({ ...c, meta: { ...c.meta, ...patch } }))
@@ -218,8 +312,22 @@ function Editor({
     }
   }
 
+  const requestCancel = () => {
+    if (dirty) setConfirmingClose(true)
+    else onCancel()
+  }
+
   return (
     <div className="flex h-full flex-col">
+      {confirmingClose && (
+        <ConfirmDialog
+          title="Discard unsaved changes?"
+          body="You've made edits to this project that haven't been saved yet. Closing now will lose them."
+          onConfirm={onCancel}
+          onCancel={() => setConfirmingClose(false)}
+        />
+      )}
+
       {/* sticky header */}
       <div className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-6 py-4 sm:px-8">
         <h3 className="font-display text-lg font-light text-white">
@@ -234,7 +342,7 @@ function Editor({
             {saving ? 'Saving…' : 'Save'}
           </button>
           <button
-            onClick={onCancel}
+            onClick={requestCancel}
             className="rounded-full border border-white/20 px-5 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white/70 transition hover:text-white"
           >
             Cancel
@@ -291,27 +399,6 @@ function Editor({
 
           <section className="space-y-4">
             <Area label="Summary" value={p.summary} onChange={(v) => set({ summary: v })} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Thumbnail URL" value={p.thumb} onChange={(v) => set({ thumb: v })} hint="3D card" />
-              <Field label="Hero image URL" value={p.hero} onChange={(v) => set({ hero: v })} hint="Project page — main image" />
-            </div>
-            {(p.thumb || p.hero) && (
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { url: p.thumb, label: 'Thumb' },
-                  { url: p.hero, label: 'Hero' },
-                ]
-                  .filter((i) => i.url)
-                  .map((i) => (
-                    <div key={i.label} className="relative">
-                      <img src={i.url} alt="" className="h-20 w-28 rounded-lg border border-white/10 object-cover" />
-                      <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-black/60 py-0.5 text-center font-mono text-[9px] uppercase tracking-wider text-white/70">
-                        {i.label}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            )}
             <Field
               label="Case study URL"
               value={p.caseStudyUrl ?? ''}
@@ -348,11 +435,18 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
   const projects = useProjects()
   const synced = useProjectsLoaded()
   const [editing, setEditing] = useState<Project | null>(null)
+  const [editorDirty, setEditorDirty] = useState(false)
+  const [confirmingClose, setConfirmingClose] = useState(false)
   const [query, setQuery] = useState('')
   const [collectionFilter, setCollectionFilter] = useState<string>(ALL_FILTER)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
   const file = useRef<HTMLInputElement>(null)
+
+  const requestClose = () => {
+    if (editing && editorDirty) setConfirmingClose(true)
+    else onClose()
+  }
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -423,6 +517,18 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
 
   return (
     <div data-lenis-prevent className="fixed inset-0 z-[90] flex flex-col bg-[#06070c]">
+      {confirmingClose && (
+        <ConfirmDialog
+          title="Discard unsaved changes?"
+          body="You have an unsaved project open. Closing the content manager now will lose those edits."
+          onConfirm={() => {
+            setConfirmingClose(false)
+            onClose()
+          }}
+          onCancel={() => setConfirmingClose(false)}
+        />
+      )}
+
       {/* Grid atmosphere matching home page */}
       <div
         className="pointer-events-none absolute inset-0 z-0"
@@ -451,7 +557,7 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
             </span>
           </div>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/60 transition hover:text-white"
             aria-label="Close"
           >
@@ -465,7 +571,19 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
       {editing ? (
         /* ---------- editor panel ---------- */
         <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
-          <Editor initial={editing} onDone={() => setEditing(null)} onCancel={() => setEditing(null)} />
+          <Editor
+            key={editing.id || 'new'}
+            initial={editing}
+            onDone={() => {
+              setEditorDirty(false)
+              setEditing(null)
+            }}
+            onCancel={() => {
+              setEditorDirty(false)
+              setEditing(null)
+            }}
+            onDirtyChange={setEditorDirty}
+          />
         </div>
       ) : (
         /* ---------- list panel ---------- */
@@ -554,13 +672,24 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((p) => (
+                {rows.map((p) => {
+                  const cover = getCoverMedia(p)
+                  return (
                   <tr key={p.id} className="border-b border-white/[0.06] last:border-0 hover:bg-white/[0.03]">
                     <td className="px-6 py-3 sm:px-10">
-                      <span
-                        className="block h-9 w-12 rounded border border-white/10 bg-cover bg-center"
-                        style={{ backgroundImage: `url(${p.thumb})`, backgroundColor: p.accent }}
-                      />
+                      {cover?.type === 'video' ? (
+                        <video
+                          src={cover.url}
+                          muted
+                          className="block h-9 w-12 rounded border border-white/10 object-cover"
+                          style={{ backgroundColor: p.accent }}
+                        />
+                      ) : (
+                        <span
+                          className="block h-9 w-12 rounded border border-white/10 bg-cover bg-center"
+                          style={{ backgroundImage: cover ? `url(${cover.url})` : undefined, backgroundColor: p.accent }}
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3 text-white/90">
                       {p.title}
@@ -603,7 +732,8 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
             {rows.length === 0 && (

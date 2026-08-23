@@ -3,13 +3,15 @@ import { playSfx } from '../../audio/audio'
 import { useProjects } from '../../hooks/useProjects'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
 import type { Project } from '../../data/projects'
+import { getCoverMedia } from '../../data/media'
 import { BottomNav } from '../ui/BottomNav'
 import { SiteHeader } from '../ui/SiteHeader'
 import { ScrollLitStatement } from '../home/ScrollLitStatement'
 import { TechMarquee } from '../home/TechMarquee'
 import { DragScroller } from '../home/DragScroller'
 import { ProjectDetail } from '../work/ProjectDetail'
-import { ImageReveal, Reveal } from './motion'
+import { CoverMedia } from '../work/CoverMedia'
+import { Reveal } from './motion'
 import { SiteFooter } from './SiteFooter'
 import type { Route } from './routes'
 
@@ -69,11 +71,13 @@ export function HomePage({ onNavigate }: { onNavigate: (r: Route) => void }) {
               className="group block w-full overflow-hidden text-left"
               aria-label={`Open ${featured.title}`}
             >
-              <ImageReveal
-                src={featured.hero}
+              <CoverMedia
+                media={getCoverMedia(featured)}
                 alt={featured.title}
                 className="aspect-[4/3] w-full"
-                imgClassName="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.03]"
+                mediaClassName="transition-transform duration-[900ms] ease-out group-hover:scale-[1.03]"
+                reveal
+                fallbackColor={featured.accent}
               />
             </button>
 
@@ -135,12 +139,12 @@ export function HomePage({ onNavigate }: { onNavigate: (r: Route) => void }) {
                 className="group w-[86vw] shrink-0 text-left sm:w-[58vw] lg:w-[38vw]"
               >
                 <div className="overflow-hidden">
-                  <img
-                    src={p.hero}
+                  <CoverMedia
+                    media={getCoverMedia(p)}
                     alt={p.title}
-                    loading="lazy"
-                    draggable={false}
-                    className="aspect-[4/3] w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.03]"
+                    className="aspect-[4/3] w-full"
+                    mediaClassName="transition-transform duration-[900ms] ease-out group-hover:scale-[1.03]"
+                    fallbackColor={p.accent}
                   />
                 </div>
                 <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 border-t border-white/10 pt-5">

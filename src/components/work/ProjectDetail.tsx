@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import gsap from 'gsap'
 import { playSfx } from '../../audio/audio'
-import { figmaEmbedSrc, normalizeGallery, type MediaItem } from '../../data/media'
+import { figmaEmbedSrc, getCoverMedia, getSecondaryMedia, type MediaItem } from '../../data/media'
 import type { Project } from '../../data/projects'
+import { CoverMedia } from './Covermedia'
 
 interface ProjectDetailProps {
   project: Project
@@ -89,13 +90,8 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
   const closing = useRef(false)
   const { meta, accent, accentAlt } = project
 
-  const galleryItems = useMemo(() => {
-    const items = normalizeGallery(project.gallery)
-    if (items.length > 0) return items
-    return ([{ type: 'image', url: project.hero }, { type: 'image', url: project.thumb }] as MediaItem[]).filter(
-      (m) => m.url,
-    )
-  }, [project])
+  const cover = useMemo(() => getCoverMedia(project), [project])
+  const galleryItems = useMemo(() => getSecondaryMedia(project), [project])
 
   // Cinematic entrance — the hero expands out of the gallery card so the
   // transition reads as entering the project rather than loading a page.
@@ -264,10 +260,12 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
           className="mt-16 aspect-[16/10] w-full origin-center overflow-hidden rounded-2xl border border-white/10 bg-black/40"
           style={{ willChange: 'transform', boxShadow: `0 40px 120px -40px ${accent}80` }}
         >
-          <img
-            src={project.hero}
+          <CoverMedia
+            media={cover}
             alt={`${project.title} for ${project.client}`}
-            className="h-full w-full object-cover"
+            className="h-full w-full"
+            soundToggle
+            fallbackColor="#0b0d13"
           />
         </div>
 

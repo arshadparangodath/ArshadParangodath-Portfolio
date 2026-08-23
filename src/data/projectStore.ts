@@ -127,8 +127,6 @@ export function emptyProject(): Project {
     client: '',
     year: new Date().getFullYear(),
     category: [],
-    thumb: '',
-    hero: '',
     gallery: [],
     caseStudyUrl: '',
     summary: '',

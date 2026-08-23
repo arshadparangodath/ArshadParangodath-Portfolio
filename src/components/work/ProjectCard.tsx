@@ -13,11 +13,13 @@ import {
   SRGBColorSpace,
   Texture,
   TextureLoader,
+  VideoTexture,
 } from 'three'
 import { CARD_W, CARD_H } from './layout'
 import { dragState } from './dragState'
 import { tagRowTexture } from './tagTexture'
 import { disciplineTags } from '../../data/tags'
+import { getCoverMedia, type MediaItem } from '../../data/media'
 import type { Project } from '../../data/projects'
 
 // --- card geometry -------------------------------------------------------
@@ -61,17 +63,83 @@ const GLOW_TEX = (() => {
   return new CanvasTexture(c)
 })()
 
-/** Loads a texture without suspending, so the card is visible immediately. */
-function useAsyncTexture(url: string): Texture | null {
-  const [tex, setTex] = useState<Texture | null>(null)
+/**
+ * Loads a project's cover media as a Three.js texture, whatever type it is:
+ *  - image: a plain static texture, same as before.
+ *  - video: THREE.VideoTexture, which Three updates every frame on its own.
+ *  - gif: browsers only decode/animate GIFs inside real <img> elements, not
+ *    WebGL textures, so we draw the (animating) <img> onto an offscreen
+ *    canvas every frame and use that canvas as the texture — `tick()` does
+ *    that redraw and must be called once per frame from the caller's own
+ *    useFrame (it's a no-op for the other two types).
+ * Never suspends, so the card is visible immediately either way.
+ */
+function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; tick: () => void } {
+  const [texture, setTexture] = useState<Texture | null>(null)
+  const gifImg = useRef<HTMLImageElement | null>(null)
+  const gifCanvas = useRef<HTMLCanvasElement | null>(null)
+  const gifCtx = useRef<CanvasRenderingContext2D | null>(null)
+
+  const url = media?.url ?? ''
+  const type = media?.type ?? 'image'
+
   useEffect(() => {
     let active = true
+    setTexture(null)
+    gifImg.current = null
+    gifCanvas.current = null
+    gifCtx.current = null
+    if (!url) return
+
+    if (type === 'video') {
+      const video = document.createElement('video')
+      video.crossOrigin = 'anonymous'
+      video.muted = true
+      video.loop = true
+      video.playsInline = true
+      video.src = url
+      video.play().catch(() => {})
+      const vt = new VideoTexture(video)
+      vt.colorSpace = SRGBColorSpace
+      if (active) setTexture(vt)
+      return () => {
+        active = false
+        video.pause()
+        video.removeAttribute('src')
+        video.load()
+      }
+    }
+
+    if (type === 'gif') {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        if (!active) return
+        const c = document.createElement('canvas')
+        c.width = img.naturalWidth || 1
+        c.height = img.naturalHeight || 1
+        const ctx = c.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, 0, 0)
+        const ct = new CanvasTexture(c)
+        ct.colorSpace = SRGBColorSpace
+        gifImg.current = img
+        gifCanvas.current = c
+        gifCtx.current = ctx
+        setTexture(ct)
+      }
+      img.src = url
+      return () => {
+        active = false
+      }
+    }
+
     loader.load(
       url,
       (t) => {
         if (!active) return
         t.colorSpace = SRGBColorSpace
-        setTex(t)
+        setTexture(t)
       },
       undefined,
       () => {}, // on error keep the accent-colour fallback
@@ -79,8 +147,15 @@ function useAsyncTexture(url: string): Texture | null {
     return () => {
       active = false
     }
-  }, [url])
-  return tex
+  }, [url, type])
+
+  const tick = () => {
+    if (type !== 'gif' || !gifCtx.current || !gifImg.current || !gifCanvas.current) return
+    gifCtx.current.drawImage(gifImg.current, 0, 0, gifCanvas.current.width, gifCanvas.current.height)
+    if (texture) texture.needsUpdate = true
+  }
+
+  return { texture, tick }
 }
 
 /** Build a heavily-blurred version of a loaded image by downsampling it to a
@@ -125,7 +200,8 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
   // Spring state for the lift (position.z) — critically-damped-ish feel.
   const lift = useRef({ v: 0, x: 0 })
 
-  const tex = useAsyncTexture(project?.thumb ?? '')
+  const cover = useMemo(() => getCoverMedia(project ?? {}), [project])
+  const { texture: tex, tick: tickCoverTexture } = useAsyncTexture(cover)
   const tags = useMemo(() => tagRowTexture(disciplineTags(project)), [project])
 
   useEffect(() => {
@@ -144,6 +220,7 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
   }, [tex])
 
   useFrame((_, delta) => {
+    tickCoverTexture()
     const g = inner.current
     if (!g) return
     const k = 1 - Math.pow(0.0015, delta)

@@ -6,13 +6,19 @@ export interface Project {
   client: string
   year: number
   category: string[]
-  thumb: string
-  hero: string
   /**
-   * Extra media shown in the project page's gallery section — any mix of
-   * images, GIFs, videos, Figma prototypes, or other embeds, in any
-   * quantity. Falls back to `hero`/`thumb` as a two-image gallery so
-   * older/seed projects that predate this field still render sensibly.
+   * Legacy fields from before the unified gallery/cover system — kept only
+   * so projects saved before this feature still show something. New
+   * projects don't set these at all; use `getCoverMedia()` from
+   * `data/media.ts` to resolve the actual thumbnail/hero everywhere.
+   */
+  thumb?: string
+  hero?: string
+  /**
+   * All of a project's media — images, GIFs, videos, Figma prototypes, or
+   * other embeds, in any quantity and order. Whichever item has
+   * `isCover: true` doubles as the thumbnail (3D card), Home page preview,
+   * and project page hero — see `getCoverMedia()` in `data/media.ts`.
    */
   gallery?: MediaItem[]
   /**
