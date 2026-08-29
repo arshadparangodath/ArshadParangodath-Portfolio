@@ -117,7 +117,10 @@ export function getSecondaryMedia(project: { gallery?: unknown; thumb?: string; 
   if (!cover) return gallery
   let skipped = false
   return gallery.filter((m) => {
-    if (!skipped && m === cover) {
+    // Compared by value, not reference — the cover and this gallery list come
+    // from separate normalizeGallery() calls, so they're never the same
+    // object instance even when they represent the same underlying item.
+    if (!skipped && m.url === cover.url && m.type === cover.type) {
       skipped = true
       return false
     }
