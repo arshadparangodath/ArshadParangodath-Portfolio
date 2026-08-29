@@ -28,6 +28,15 @@ export interface Project {
    */
   caseStudyUrl?: string
   summary: string
+  /**
+   * Narrative sections on the project page — "Overview", "The work", and the
+   * "Outcome" card. Optional so older projects don't go blank: the page
+   * falls back to generic placeholder copy for whichever of these haven't
+   * been filled in yet.
+   */
+  overview?: string
+  process?: string
+  outcome?: string
   accent: string
   /** Editorial case-study metadata shown at the top of the project page. */
   meta: {

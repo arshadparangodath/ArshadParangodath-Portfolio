@@ -23,8 +23,16 @@ function Meta({ label, value }: { label: string; value: string }) {
 }
 
 /** Renders one gallery entry according to its media type. */
-function MediaBlock({ item, title }: { item: MediaItem; title: string }) {
-  const frame = 'w-full overflow-hidden rounded-xl border border-white/10 bg-black/40'
+function MediaBlock({
+  item,
+  title,
+  className = '',
+}: {
+  item: MediaItem
+  title: string
+  className?: string
+}) {
+  const frame = `w-full overflow-hidden rounded-xl border border-white/10 bg-black/40 ${className}`
 
   let content: React.ReactNode
   switch (item.type) {
@@ -275,37 +283,41 @@ export function ProjectDetail({ project, reducedMotion, onClose, onNext }: Proje
             Overview
           </h3>
           <p data-reveal className="max-w-2xl text-lg leading-relaxed text-white/75">
-            {project.client} came to us wanting more than a website — they wanted a moment. We began
-            with a single organising idea and pressure-tested it in code within the first week, so
-            concept and craft could evolve hand in hand rather than in sequence.
+            {project.overview ||
+              `${project.client} came to us wanting more than a website — they wanted a moment. We began with a single organising idea and pressure-tested it in code within the first week, so concept and craft could evolve hand in hand rather than in sequence.`}
           </p>
 
           <h3 data-reveal className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">
             The work
           </h3>
           <p data-reveal className="max-w-2xl text-lg leading-relaxed text-white/75">
-            The result pairs a bespoke {project.category[0].toLowerCase()} system with a real-time
-            rendering pipeline, custom shaders, and a motion language tuned frame by frame. Every
-            transition is designed to feel inevitable — nothing arbitrary, nothing wasted.
+            {project.process ||
+              `The result pairs a bespoke ${project.category[0]?.toLowerCase() ?? 'design'} system with a real-time rendering pipeline, custom shaders, and a motion language tuned frame by frame. Every transition is designed to feel inevitable — nothing arbitrary, nothing wasted.`}
           </p>
         </div>
 
         {/* --- gallery --- */}
-        <div className="mt-16 space-y-6">
+        <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2">
           {galleryItems.map((item, i) => (
-            <MediaBlock key={`${item.type}-${item.url}-${i}`} item={item} title={project.title} />
+            <MediaBlock
+              key={`${item.type}-${item.url}-${i}`}
+              item={item}
+              title={project.title}
+              className={item.layout === 'half' ? 'sm:col-span-1' : 'sm:col-span-2'}
+            />
           ))}
 
           <div
             data-reveal
-            className="flex flex-col justify-end rounded-xl border border-white/12 p-8"
+            className="flex flex-col justify-end rounded-xl border border-white/12 p-8 sm:col-span-2"
             style={{ background: `linear-gradient(160deg, ${accent}33, ${accentAlt}11 60%, transparent)` }}
           >
             <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/45">Outcome</p>
             <p className="mt-3 max-w-2xl text-lg leading-relaxed text-white/85">
-              Launched to a global audience with zero jank
-              {meta.awards.length > 0 ? `, ${meta.awards[0]},` : ','} and a measurable lift in
-              time-on-page for {project.client}.
+              {project.outcome ||
+                `Launched to a global audience with zero jank${
+                  meta.awards.length > 0 ? `, ${meta.awards[0]},` : ','
+                } and a measurable lift in time-on-page for ${project.client}.`}
             </p>
           </div>
         </div>

@@ -19,6 +19,12 @@ export interface MediaItem {
    * embedded prototype can't sensibly serve as a thumbnail.
    */
   isCover?: boolean
+  /**
+   * How this item sits in the gallery grid — 'full' takes the entire row,
+   * 'half' sits side by side with an adjacent 'half' item. Defaults to
+   * 'full' when unset, matching the original always-full-width behaviour.
+   */
+  layout?: 'full' | 'half'
 }
 
 export const MEDIA_TYPES: MediaType[] = ['image', 'gif', 'video', 'figma', 'iframe']
@@ -57,7 +63,7 @@ export function normalizeMediaItem(raw: unknown): MediaItem {
   if (raw && typeof raw === 'object' && 'url' in raw) {
     const r = raw as Partial<MediaItem>
     const type = MEDIA_TYPES.includes(r.type as MediaType) ? (r.type as MediaType) : 'image'
-    return { type, url: r.url ?? '', caption: r.caption, isCover: r.isCover }
+    return { type, url: r.url ?? '', caption: r.caption, isCover: r.isCover, layout: r.layout === 'half' ? 'half' : 'full' }
   }
   return { type: 'image', url: '' }
 }

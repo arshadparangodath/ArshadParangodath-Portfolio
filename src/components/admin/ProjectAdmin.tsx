@@ -100,11 +100,13 @@ function Area({
   value,
   onChange,
   rows = 3,
+  hint,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   rows?: number
+  hint?: string
 }) {
   return (
     <label className="block">
@@ -115,6 +117,7 @@ function Area({
         onChange={(e) => onChange(e.target.value)}
         className="mt-1.5 w-full resize-y rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-white/45"
       />
+      {hint && <span className="mt-1.5 block text-[11px] text-white/35">{hint}</span>}
     </label>
   )
 }
@@ -174,6 +177,12 @@ function GalleryEditor({
           No cover chosen yet — the first image/GIF/video below is being used by default.
         </p>
       )}
+      {items.length > 0 && (
+        <p className="mt-2 text-[11px] text-white/30">
+          "Side by side" pairs two consecutive items into one row on the project page; "Full width"
+          takes the whole row on its own.
+        </p>
+      )}
 
       <div className="mt-3 space-y-3">
         {items.map((item, i) => {
@@ -212,6 +221,15 @@ function GalleryEditor({
                     {item.isCover ? '★ Cover' : 'Set as cover'}
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => update(i, { layout: item.layout === 'half' ? 'full' : 'half' })}
+                  className="rounded-full border border-white/20 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-white/60 transition hover:border-white/45 hover:text-white"
+                  title="Toggle between full width and side-by-side layout"
+                >
+                  {item.layout === 'half' ? '▥ Side by side' : '▭ Full width'}
+                </button>
 
                 <div className="ml-auto flex items-center gap-1">
                   <button
@@ -399,7 +417,33 @@ function Editor({
           </section>
 
           <section className="space-y-4">
-            <Area label="Summary" value={p.summary} onChange={(v) => set({ summary: v })} />
+            <Area
+              label="Summary"
+              value={p.summary}
+              onChange={(v) => set({ summary: v })}
+              hint="Short subtitle shown near the top of the project page"
+            />
+            <Area
+              label="Overview"
+              value={p.overview ?? ''}
+              onChange={(v) => set({ overview: v })}
+              rows={4}
+              hint="The 'Overview' section on the project page — leave blank to use generic placeholder text"
+            />
+            <Area
+              label="The work"
+              value={p.process ?? ''}
+              onChange={(v) => set({ process: v })}
+              rows={4}
+              hint="The 'The work' section on the project page — leave blank to use generic placeholder text"
+            />
+            <Area
+              label="Outcome"
+              value={p.outcome ?? ''}
+              onChange={(v) => set({ outcome: v })}
+              rows={3}
+              hint="The 'Outcome' card at the end of the gallery — leave blank to use generic placeholder text"
+            />
             <Field
               label="Case study URL"
               value={p.caseStudyUrl ?? ''}
