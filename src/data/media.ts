@@ -68,6 +68,19 @@ export function normalizeGallery(raw: unknown): MediaItem[] {
 }
 
 /**
+ * Same shape-coercion as normalizeGallery, but keeps blank/in-progress
+ * entries instead of filtering them out — used by the admin editor, where a
+ * freshly-added row has no URL yet and needs to stay visible so you can type
+ * one in. normalizeGallery's filtering is correct for display purposes
+ * (nothing should render with an empty URL) but wrong for editing (a row you
+ * just added would vanish before you could fill it in).
+ */
+export function coerceGalleryForEditing(raw: unknown): MediaItem[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map(normalizeMediaItem)
+}
+
+/**
  * Resolves the single item that should represent this project as its
  * thumbnail/cover/hero — whichever gallery item has `isCover: true`, falling
  * back to the first eligible gallery item, then to the legacy `thumb`/`hero`

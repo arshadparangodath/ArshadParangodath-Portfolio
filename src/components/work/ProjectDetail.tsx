@@ -3,7 +3,7 @@ import gsap from 'gsap'
 import { playSfx } from '../../audio/audio'
 import { figmaEmbedSrc, getCoverMedia, getSecondaryMedia, type MediaItem } from '../../data/media'
 import type { Project } from '../../data/projects'
-import { CoverMedia } from './Covermedia'
+import { CoverMedia } from './CoverMedia'
 
 interface ProjectDetailProps {
   project: Project

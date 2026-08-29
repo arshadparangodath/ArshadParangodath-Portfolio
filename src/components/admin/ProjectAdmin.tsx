@@ -5,8 +5,8 @@ import {
   MEDIA_TYPES,
   MEDIA_TYPE_HINTS,
   MEDIA_TYPE_LABELS,
+  coerceGalleryForEditing,
   getCoverMedia,
-  normalizeGallery,
   type MediaItem,
   type MediaType,
 } from '../../data/media'
@@ -303,7 +303,8 @@ function Editor({
     if (!id || !p.title.trim()) return
     setSaving(true)
     try {
-      await saveProject({ ...p, id, year: Number(p.year) || new Date().getFullYear() })
+      const gallery = (p.gallery ?? []).filter((m) => m.url.trim() !== '')
+      await saveProject({ ...p, id, gallery, year: Number(p.year) || new Date().getFullYear() })
       onDone()
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Could not save — check your connection and try again.')
@@ -406,7 +407,7 @@ function Editor({
               hint="Optional — external link (PDF, live site, Notion, etc). Adds a 'Complete case study' button that opens in a new tab."
             />
             <GalleryEditor
-              items={normalizeGallery(p.gallery)}
+              items={coerceGalleryForEditing(p.gallery)}
               onChange={(gallery) => set({ gallery })}
             />
           </section>
