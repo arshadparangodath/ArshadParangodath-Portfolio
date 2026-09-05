@@ -19,7 +19,7 @@ export function SiteHeader({ onNavigate }: { onNavigate: (r: Route) => void }) {
         aria-label="Home"
         className="group pointer-events-auto"
       >
-        <span className="relative block h-10 w-10 sm:h-11 sm:w-11">
+        <span className="relative block h-12 w-12 sm:h-14 sm:w-14">
           <img
             src="/logo/logo.png"
             alt="Arshad Parangodath"
@@ -40,6 +40,7 @@ export function SiteHeader({ onNavigate }: { onNavigate: (r: Route) => void }) {
         <button
           onClick={toggleSound}
           aria-pressed={soundOn}
+          aria-label={soundOn ? 'Mute sound' : 'Unmute sound'}
           className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-white/60 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <span className="flex h-3 items-end gap-[2px]" aria-hidden>
@@ -57,7 +58,7 @@ export function SiteHeader({ onNavigate }: { onNavigate: (r: Route) => void }) {
               />
             ))}
           </span>
-          Sound [{soundOn ? 'on' : 'off'}]
+          <span className="hidden sm:inline">Sound [{soundOn ? 'on' : 'off'}]</span>
         </button>
         <button
           onClick={() => {
