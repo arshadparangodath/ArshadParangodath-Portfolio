@@ -16,13 +16,23 @@ export function SiteHeader({ onNavigate }: { onNavigate: (r: Route) => void }) {
           playSfx('nav')
           onNavigate('home')
         }}
-        className="pointer-events-auto flex items-center gap-3"
+        aria-label="Home"
+        className="group pointer-events-auto"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-sm text-white">
-          ✳
-        </span>
-        <span className="text-xs font-medium uppercase tracking-[0.3em] text-white/70">
-          ArshadParangodath
+        <span className="relative block h-10 w-10 sm:h-11 sm:w-11">
+          <img
+            src="/logo/logo.png"
+            alt="Arshad Parangodath"
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-contain opacity-100 transition-opacity duration-300 group-hover:opacity-0"
+          />
+          <img
+            src="/logo/logo.gif"
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-contain opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          />
         </span>
       </button>
 
