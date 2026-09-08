@@ -81,9 +81,11 @@ export function WorkShowcase({ onNavigate }: { onNavigate: (route: Route) => voi
         onSelect={handleSelect}
       />
 
-      {/* Corner blur + distortion — two masked, over-scaled backdrop-blur
-          layers that stretch toward each corner. The scale(1.08) exaggerates
-          the fisheye smear so the wall appears to warp into the corners. */}
+      {/* Edge blur + distortion — two masked, over-scaled backdrop-blur layers.
+          The mask ellipses are deliberately narrow on X, tall on Y: this
+          keeps roughly 3 columns sharp/legible in the centre while columns
+          further out curve into blur (matching the reference), but lets
+          more rows stay clear top-to-bottom before the same fade kicks in. */}
       <div
         className="pointer-events-none absolute inset-0 z-10 origin-center"
         style={{
@@ -91,9 +93,9 @@ export function WorkShowcase({ onNavigate }: { onNavigate: (route: Route) => voi
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
           maskImage:
-            'radial-gradient(ellipse 62% 62% at 50% 50%, transparent 42%, rgba(0,0,0,0.6) 74%, black 100%)',
+            'radial-gradient(ellipse 42% 84% at 50% 50%, transparent 34%, rgba(0,0,0,0.6) 70%, black 100%)',
           WebkitMaskImage:
-            'radial-gradient(ellipse 62% 62% at 50% 50%, transparent 42%, rgba(0,0,0,0.6) 74%, black 100%)',
+            'radial-gradient(ellipse 42% 84% at 50% 50%, transparent 34%, rgba(0,0,0,0.6) 70%, black 100%)',
         }}
       />
       <div
@@ -103,18 +105,19 @@ export function WorkShowcase({ onNavigate }: { onNavigate: (route: Route) => voi
           backdropFilter: 'blur(26px) saturate(115%)',
           WebkitBackdropFilter: 'blur(26px) saturate(115%)',
           maskImage:
-            'radial-gradient(ellipse 78% 78% at 50% 50%, transparent 60%, black 100%)',
+            'radial-gradient(ellipse 58% 94% at 50% 50%, transparent 52%, black 100%)',
           WebkitMaskImage:
-            'radial-gradient(ellipse 78% 78% at 50% 50%, transparent 60%, black 100%)',
+            'radial-gradient(ellipse 58% 94% at 50% 50%, transparent 52%, black 100%)',
         }}
       />
 
-      {/* Lens glow + edge vignette overlaid on the gallery */}
+      {/* Lens glow + edge vignette overlaid on the gallery — same tall-narrow
+          shaping as the blur masks above, for a consistent clear window. */}
       <div
         className="pointer-events-none absolute inset-0 z-10"
         style={{
           background:
-            'radial-gradient(85% 70% at 50% 45%, rgba(80,60,120,0.18), transparent 55%), radial-gradient(120% 120% at 50% 50%, transparent 45%, rgba(0,0,0,0.85) 100%)',
+            'radial-gradient(60% 75% at 50% 45%, rgba(80,60,120,0.18), transparent 55%), radial-gradient(78% 135% at 50% 50%, transparent 40%, rgba(0,0,0,0.85) 100%)',
         }}
       />
 
