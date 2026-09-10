@@ -48,21 +48,6 @@ const STROKE_BASE = new Color('#3a3b44')
 const loader = new TextureLoader()
 loader.setCrossOrigin('anonymous')
 
-/** A soft radial falloff used as the hover edge-glow — opaque centre (hidden
- *  behind the card) fading to transparent so only a soft fringe shows. */
-const GLOW_TEX = (() => {
-  const s = 128
-  const c = document.createElement('canvas')
-  c.width = c.height = s
-  const ctx = c.getContext('2d')!
-  const g = ctx.createRadialGradient(s / 2, s / 2, s * 0.24, s / 2, s / 2, s * 0.5)
-  g.addColorStop(0, 'rgba(255,255,255,1)')
-  g.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, s, s)
-  return new CanvasTexture(c)
-})()
-
 /**
  * Loads a project's cover media as a Three.js texture, whatever type it is:
  *  - image: a plain static texture, same as before.
@@ -182,17 +167,18 @@ interface ProjectCardProps {
 }
 
 /**
- * A framed 3:4 card: a dark panel with a padded thumbnail up top and a caption
- * below. A thin stroke is always present. Hovering does not resize the card —
- * instead a heavily-blurred copy of its image blooms behind it and a soft
- * accent edge-glow wraps the frame. Positioning is handled by the parent wall.
+ * A framed 3:4 card: a blurred, zoomed copy of its own thumbnail fills the
+ * panel as a background, with the sharp padded thumbnail floating on top and
+ * a caption below. A thin stroke is always present. Hovering does not resize
+ * the card — the blurred backdrop fading in behind the thumbnail is the only
+ * hover effect. Positioning is
+ * handled by the parent wall.
  */
 export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHover, onSelect }: ProjectCardProps) {
   const inner = useRef<Group>(null)
   const image = useRef<MeshBasicMaterial>(null)
   const stroke = useRef<MeshBasicMaterial>(null)
-  const glow = useRef<MeshBasicMaterial>(null)
-  const blur = useRef<MeshBasicMaterial>(null)
+  const panelBlur = useRef<MeshBasicMaterial>(null)
   const imgBase = useRef(new Color(project?.accent ?? '#888888'))
   const accent = useRef(new Color(project?.accent ?? '#ffffff'))
   const h = useRef(0) // smoothed hover factor
@@ -212,10 +198,10 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
       imgBase.current.set('#ffffff')
     }
     const src = tex.image as CanvasImageSource | undefined
-    if (src && blur.current) {
-      blur.current.map = makeBlurred(src)
-      blur.current.needsUpdate = true
-      blur.current.color.set('#ffffff')
+    if (src && panelBlur.current) {
+      panelBlur.current.map = makeBlurred(src)
+      panelBlur.current.needsUpdate = true
+      panelBlur.current.color.set('#ffffff')
     }
   }, [tex])
 
@@ -227,8 +213,10 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
 
     h.current = MathUtils.lerp(h.current, hovered ? 1 : 0, k)
 
-    // Spring-driven lift toward the camera: gentle on hover, dramatic on focus.
-    const targetZ = focused ? 3.4 : hovered ? 0.102 : 0
+    // Spring-driven lift toward the camera — only for the focused/opened
+    // state now. Hovering no longer elevates, scales, or tilts the card; the
+    // blur backdrop fading in is the only hover effect.
+    const targetZ = focused ? 3.4 : 0
     const s = lift.current
     const dt = Math.min(delta, 1 / 30)
     const STIFF = 150
@@ -237,27 +225,15 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
     s.x += s.v * dt
     g.position.z = s.x
 
-    const targetScale = focused ? 2.3 : hovered ? 1.0105 : 1
+    const targetScale = focused ? 2.3 : 1
     g.scale.setScalar(MathUtils.lerp(g.scale.x, targetScale, k))
 
-    // Gentle 3D rotation toward the cursor + a few-pixels magnetic follow.
-    const tiltAmt = focused ? 0 : h.current
-    g.rotation.y = MathUtils.lerp(g.rotation.y, local.current.x * 0.048 * tiltAmt, k)
-    g.rotation.x = MathUtils.lerp(g.rotation.x, -local.current.y * 0.048 * tiltAmt, k)
-    if (!focused) {
-      g.position.x = MathUtils.lerp(g.position.x, local.current.x * 0.015 * h.current, k)
-      g.position.y = MathUtils.lerp(g.position.y, -local.current.y * 0.015 * h.current, k)
-    }
-
     if (image.current) {
-      const bright = hovered || focused ? 1 : dimmed ? 0.42 : 0.9
+      const bright = focused ? 1 : dimmed ? 0.42 : 0.9
       image.current.color.copy(imgBase.current).multiplyScalar(bright)
     }
-    if (stroke.current) {
-      stroke.current.color.copy(STROKE_BASE).lerp(accent.current, h.current)
-    }
-    if (glow.current) glow.current.opacity = h.current * 0.7
-    if (blur.current) blur.current.opacity = h.current * 0.85
+    // Blurred backdrop fills in behind the thumbnail only while hovering.
+    if (panelBlur.current) panelBlur.current.opacity = h.current
   })
 
   if (!project) return null
@@ -289,46 +265,19 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
         onSelect(project.id, cardKey)
       }}
     >
-      {/* blurred image backdrop (hover only) */}
-      <mesh position={[0, 0, -0.06]}>
-        <planeGeometry args={[CARD_W * 1.105, CARD_H * 1.09]} />
-        <meshBasicMaterial
-          ref={blur}
-          color={project.accent}
-          transparent
-          opacity={0}
-          depthWrite={false}
-          side={DoubleSide}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* soft accent edge-glow (hover only) */}
-      <mesh position={[0, 0, -0.05]}>
-        <planeGeometry args={[CARD_W * 1.18, CARD_H * 1.165]} />
-        <meshBasicMaterial
-          ref={glow}
-          map={GLOW_TEX}
-          color={project.accent}
-          transparent
-          opacity={0}
-          blending={AdditiveBlending}
-          depthWrite={false}
-          side={DoubleSide}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* always-on thin stroke frame */}
+      {/* always-on thin grey stroke frame — distinguishes adjacent cards */}
       <mesh position={[0, 0, -0.02]}>
         <planeGeometry args={[CARD_W + STROKE * 2, CARD_H + STROKE * 2]} />
         <meshBasicMaterial ref={stroke} color={STROKE_BASE} side={DoubleSide} toneMapped={false} />
       </mesh>
 
-      {/* card panel */}
+      {/* card panel — a blurred, zoomed copy of the thumbnail fills the
+          padding around the sharp image, contained within this card's own
+          frame (not bleeding onto neighbouring cards). Falls back to a flat
+          accent colour until the texture loads. */}
       <mesh position={[0, 0, 0]}>
         <planeGeometry args={[CARD_W, CARD_H]} />
-        <meshBasicMaterial color="#0c0d12" side={DoubleSide} toneMapped={false} />
+        <meshBasicMaterial ref={panelBlur} color={project.accent} side={DoubleSide} toneMapped={false} />
       </mesh>
 
       {/* generously padded thumbnail, floating in the middle of the card */}

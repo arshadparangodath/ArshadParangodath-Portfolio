@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Group, MathUtils, Object3D } from 'three'
-import { buildPool, CELL_W, CELL_H, COLS, ROWS, RADIUS } from './layout'
+import { Group, MathUtils } from 'three'
+import { buildPool, CELL_W, CELL_H, COLS, ROWS, CAMERA_Z, DRAG_ZOOM_OUT } from './layout'
 import { dragState, DRAG_THRESHOLD } from './dragState'
 import { useProjects } from '../../hooks/useProjects'
 import { ProjectCard } from './ProjectCard'
@@ -20,10 +20,13 @@ interface CardSphereProps {
 }
 
 /**
- * An infinite curved wall. Drag pans a virtual offset; every frame each pooled
- * card is mapped to the nearest logical cell around the current view centre and
- * projected onto a sphere-from-inside, so the grid wraps endlessly in both
- * directions while always keeping a consistent ~3-column framing.
+ * An infinite flat wall of cards. Drag pans a virtual offset in a straight
+ * line in both axes (plain 2D translation — no spherical trigonometry); every
+ * frame each pooled card is mapped to the nearest logical cell around the
+ * current view centre and placed on a flat plane facing the camera, so the
+ * grid wraps endlessly in both directions. The curved "inside a barrel" look
+ * comes entirely from the BarrelDistortion post-process wrapping this scene,
+ * not from the cards' actual 3D placement.
  */
 export function CardSphere({
   hoveredKey,
@@ -43,7 +46,6 @@ export function CardSphere({
     return buildPool(list.length > 0 ? list : all)
   }, [all, activeFilter])
   const groups = useRef<(Group | null)[]>([])
-  const dummy = useMemo(() => new Object3D(), [])
 
   const state = useRef({
     dragging: false,
@@ -124,8 +126,14 @@ export function CardSphere({
       const py = frozen ? 0 : -s.ptrY * 0.12 + Math.cos(t * 0.15) * 0.025
       rs.camera.position.x = MathUtils.lerp(rs.camera.position.x, px, k)
       rs.camera.position.y = MathUtils.lerp(rs.camera.position.y, py, k)
-      rs.camera.lookAt(px * 0.175, py * 0.175, -1)
+      rs.camera.lookAt(px * 0.175, py * 0.175, 0)
     }
+
+    // Hold-to-zoom-out: the camera eases back slightly while actively
+    // dragging, and eases back in on release.
+    const zTarget = CAMERA_Z + (s.dragging ? DRAG_ZOOM_OUT : 0)
+    const zk = 1 - Math.pow(0.001, delta)
+    rs.camera.position.z = MathUtils.lerp(rs.camera.position.z, zTarget, zk)
 
     if (!frozen) {
       if (!s.dragging) {
@@ -151,18 +159,10 @@ export function CardSphere({
       const sx = logicalCol * CELL_W - s.offX
       const sy = logicalRow * CELL_H - s.offY
 
-      // Project onto the inside of a sphere (camera looks toward -Z).
-      const theta = sx / RADIUS
-      const phi = sy / RADIUS
-      const cp = Math.cos(phi)
-      g.position.set(
-        RADIUS * Math.sin(theta) * cp,
-        RADIUS * Math.sin(phi),
-        -RADIUS * Math.cos(theta) * cp,
-      )
-      dummy.position.copy(g.position)
-      dummy.lookAt(0, 0, 0)
-      g.quaternion.copy(dummy.quaternion)
+      // Flat placement — a straight-line 2D grid. All the "curved wall" look
+      // comes from the BarrelDistortion post-process, not from this position.
+      g.position.set(sx, sy, 0)
+      g.quaternion.identity()
     }
   })
 

@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { CardSphere } from './CardSphere'
+import { BarrelDistortion } from './BarrelDistortion'
+import { CAMERA_Z } from './layout'
 
 interface SphereSceneProps {
   hoveredKey: string | null
@@ -17,14 +19,17 @@ export function SphereScene(props: SphereSceneProps) {
       className="!absolute inset-0"
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-      // A moderately wide FOV from the centre keeps a ~3-column framing with
-      // panels large and legible, curving toward the edges.
-      camera={{ position: [0, 0, 0.01], fov: 84, near: 0.01, far: 50 }}
+      // A normal perspective view of a flat wall, sitting back at CAMERA_Z —
+      // the barrel/fisheye curve is added afterward by BarrelDistortion, not
+      // by this camera or by the cards' own placement.
+      camera={{ position: [0, 0, CAMERA_Z], fov: 50, near: 0.1, far: 60 }}
     >
       <color attach="background" args={['#050506']} />
       <ambientLight intensity={1.35} />
       <Suspense fallback={null}>
-        <CardSphere {...props} />
+        <BarrelDistortion strength={0.32} blurAmount={0.028}>
+          <CardSphere {...props} />
+        </BarrelDistortion>
       </Suspense>
     </Canvas>
   )

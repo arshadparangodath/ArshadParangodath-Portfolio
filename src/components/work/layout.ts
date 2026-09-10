@@ -7,20 +7,33 @@ export interface PoolCard {
   project: Project
 }
 
-// The viewer sits at the centre of a curved wall. The wall is an *infinite*
-// periodic grid — a fixed pool of cards is recycled in both axes as you drag,
-// so there is never an edge in any direction.
-// A larger radius flattens the wall — less barrel curvature across the view.
-export const RADIUS = 11
+// A flat grid of cards — NOT a sphere. A fixed pool is recycled in both axes
+// as you drag (an *infinite* periodic grid), but each card sits on a plane
+// facing the camera directly; dragging moves the grid in a straight line in
+// both axes. The barrel/fisheye curve you see is a 2D post-process
+// (see BarrelDistortion.tsx) applied to the rendered image, not the cards'
+// actual 3D placement.
 export const COLS = 14
 export const ROWS = 11
 
-// Landscape cards placed edge-to-edge (no gaps), scaled to the wall radius so
-// their apparent size stays constant as the curvature flattens.
+// How far back the camera sits from the flat card plane. Smaller = fewer,
+// bigger-looking cards on screen (more "zoomed in").
+export const CAMERA_Z = 13
+// How much further back the camera eases to while actively dragging — a
+// subtle "hold to zoom out" release.
+export const DRAG_ZOOM_OUT = 1.6
+
+// Card width chosen to fit ~6 columns across a typical desktop viewport at
+// CAMERA_Z above. CARD_H keeps the card's own landscape (4:3) shape — it does
+// NOT determine row spacing (see CELL_H below).
 export const CARD_W = 3.6
 export const CARD_H = (CARD_W * 3) / 4
 export const CELL_W = CARD_W
-export const CELL_H = CARD_H
+// Row spacing is deliberately taller than the card itself: fitting ~3 rows
+// (instead of the ~4.5 that CARD_H alone would give) needs more vertical
+// distance between rows without distorting the card into a portrait shape —
+// so cards keep their landscape look, with a visible gap between rows.
+export const CELL_H = CARD_H * 1.5
 
 /** The recyclable pool. Card (ci,ri) always shows the same project, so its
  *  texture never needs reloading as it wraps around. */
