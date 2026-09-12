@@ -27,7 +27,7 @@ export function SphereScene(props: SphereSceneProps) {
       <color attach="background" args={['#050506']} />
       <ambientLight intensity={1.35} />
       <Suspense fallback={null}>
-        <BarrelDistortion strength={0.32} blurAmount={0.028}>
+        <BarrelDistortion strength={0.55} blurAmount={0.028}>
           <CardSphere {...props} />
         </BarrelDistortion>
       </Suspense>

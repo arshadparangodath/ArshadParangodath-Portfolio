@@ -147,8 +147,8 @@ function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; ti
  *  tiny canvas and letting the GPU smear it back up. */
 function makeBlurred(img: CanvasImageSource): CanvasTexture {
   const c = document.createElement('canvas')
-  c.width = 20
-  c.height = 27
+  c.width = 10
+  c.height = 14
   const ctx = c.getContext('2d')!
   ctx.drawImage(img, 0, 0, c.width, c.height)
   const t = new CanvasTexture(c)
@@ -232,8 +232,10 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
       const bright = focused ? 1 : dimmed ? 0.42 : 0.9
       image.current.color.copy(imgBase.current).multiplyScalar(bright)
     }
-    // Blurred backdrop fills in behind the thumbnail only while hovering.
-    if (panelBlur.current) panelBlur.current.opacity = h.current
+    // Blurred backdrop fills in behind the thumbnail only while hovering —
+    // subtle (never fully opaque) so it reads as a soft ambient fill, not a
+    // solid layer swap.
+    if (panelBlur.current) panelBlur.current.opacity = h.current * 0.8
   })
 
   if (!project) return null
@@ -277,7 +279,14 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
           accent colour until the texture loads. */}
       <mesh position={[0, 0, 0]}>
         <planeGeometry args={[CARD_W, CARD_H]} />
-        <meshBasicMaterial ref={panelBlur} color={project.accent} side={DoubleSide} toneMapped={false} />
+        <meshBasicMaterial
+          ref={panelBlur}
+          color={project.accent}
+          transparent
+          opacity={0}
+          side={DoubleSide}
+          toneMapped={false}
+        />
       </mesh>
 
       {/* generously padded thumbnail, floating in the middle of the card */}

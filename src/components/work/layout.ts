@@ -24,16 +24,11 @@ export const CAMERA_Z = 13
 export const DRAG_ZOOM_OUT = 1.6
 
 // Card width chosen to fit ~6 columns across a typical desktop viewport at
-// CAMERA_Z above. CARD_H keeps the card's own landscape (4:3) shape — it does
-// NOT determine row spacing (see CELL_H below).
+// CAMERA_Z above.
 export const CARD_W = 3.6
 export const CARD_H = (CARD_W * 3) / 4
 export const CELL_W = CARD_W
-// Row spacing is deliberately taller than the card itself: fitting ~3 rows
-// (instead of the ~4.5 that CARD_H alone would give) needs more vertical
-// distance between rows without distorting the card into a portrait shape —
-// so cards keep their landscape look, with a visible gap between rows.
-export const CELL_H = CARD_H * 1.5
+export const CELL_H = CARD_H
 
 /** The recyclable pool. Card (ci,ri) always shows the same project, so its
  *  texture never needs reloading as it wraps around. */
