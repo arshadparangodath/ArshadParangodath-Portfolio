@@ -42,8 +42,8 @@ const ROW_BOTTOM = -CARD_H / 2 + EDGE
 const META_SIZE = 0.088
 const TAG_H = 0.135
 
-const STROKE = 0.02 // hairline frame width
-const STROKE_BASE = new Color('#3a3b44')
+const STROKE = 0.03 // hairline frame width
+const STROKE_BASE = new Color('#55565f')
 
 const loader = new TextureLoader()
 loader.setCrossOrigin('anonymous')
@@ -235,7 +235,7 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
     // Blurred backdrop fills in behind the thumbnail only while hovering —
     // subtle (never fully opaque) so it reads as a soft ambient fill, not a
     // solid layer swap.
-    if (panelBlur.current) panelBlur.current.opacity = h.current * 0.8
+    if (panelBlur.current) panelBlur.current.opacity = h.current * 0.6
   })
 
   if (!project) return null

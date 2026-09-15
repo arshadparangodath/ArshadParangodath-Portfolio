@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../../hooks/useProjects'
 import { useReducedMotion } from '../../hooks/useReducedMotion'
-import { playSfx } from '../../audio/audio'
-import { dragState } from './dragState'
+import { playSfx, duckMusicForDrag, unduckMusicForDrag } from '../../audio/audio'
 import { SphereScene } from './SphereScene'
 import { ProjectDetail } from './ProjectDetail'
 import { BottomNav } from '../ui/BottomNav'
@@ -18,12 +17,14 @@ export function WorkShowcase({ onNavigate }: { onNavigate: (route: Route) => voi
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
 
-  // Grab / release cues for the gallery drag gesture.
+  // While actively holding/dragging the gallery, the background music slows
+  // and gets reverbed instead of playing a click sound on every grab/release
+  // — the click was firing on every drag gesture and felt repetitive. The
+  // "open" click sound (below, in handleSelect) still plays normally when a
+  // card is actually clicked to open.
   useEffect(() => {
-    const down = () => playSfx('grab')
-    const up = () => {
-      if (dragState.moved) playSfx('release')
-    }
+    const down = () => duckMusicForDrag()
+    const up = () => unduckMusicForDrag()
     window.addEventListener('pointerdown', down)
     window.addEventListener('pointerup', up)
     return () => {

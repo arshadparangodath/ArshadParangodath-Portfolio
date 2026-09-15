@@ -29,10 +29,13 @@ const fragmentShader = /* glsl */ `
     // convex fisheye bulge toward the viewer.
     vec2 warped = vUv - cc * dist2 * strength;
 
-    // Edge blur: a cheap 8-tap radial blur whose radius grows with distance
-    // from centre, so the corners/edges soften into the curve while the
-    // centre stays crisp.
-    float blur = blurAmount * dist2;
+    // Edge blur: concentrated at the true corners/edges only — smoothstep
+    // keeps the center and most of the frame crisp, with blur ramping up
+    // steeply only past a threshold distance from center (previously this
+    // grew smoothly from the very center outward, blurring far too much of
+    // the frame).
+    float edge = smoothstep(0.16, 0.5, dist2);
+    float blur = blurAmount * edge * edge;
     vec4 color = vec4(0.0);
     const int TAPS = 8;
     for (int i = 0; i < TAPS; i++) {
