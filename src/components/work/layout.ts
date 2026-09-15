@@ -18,7 +18,7 @@ export const ROWS = 11
 
 // How far back the camera sits from the flat card plane. Smaller = fewer,
 // bigger-looking cards on screen (more "zoomed in").
-export const CAMERA_Z = 15
+export const CAMERA_Z = 12
 // How much further back the camera eases to while actively dragging — a
 // subtle "hold to zoom out" release.
 export const DRAG_ZOOM_OUT = 2
