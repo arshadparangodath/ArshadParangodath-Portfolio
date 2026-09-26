@@ -16,7 +16,6 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   uniform sampler2D tDiffuse;
   uniform float strength;   // barrel warp amount
-  uniform float blurAmount; // edge blur amount
   varying vec2 vUv;
 
   void main() {
@@ -29,21 +28,9 @@ const fragmentShader = /* glsl */ `
     // convex fisheye bulge toward the viewer.
     vec2 warped = vUv - cc * dist2 * strength;
 
-    // Edge blur: concentrated at the true corners/edges only — smoothstep
-    // keeps the center and most of the frame crisp, with blur ramping up
-    // steeply only past a threshold distance from center (previously this
-    // grew smoothly from the very center outward, blurring far too much of
-    // the frame).
-    float edge = smoothstep(0.16, 0.5, dist2);
-    float blur = blurAmount * edge * edge;
-    vec4 color = vec4(0.0);
-    const int TAPS = 8;
-    for (int i = 0; i < TAPS; i++) {
-      float angle = float(i) * 0.7853981634; // 2*pi / 8
-      vec2 offset = vec2(cos(angle), sin(angle)) * blur;
-      color += texture2D(tDiffuse, warped + offset);
-    }
-    gl_FragColor = color / float(TAPS);
+    // No blur — distortion only. A single sample at the warped coordinate,
+    // full sharpness everywhere including the corners.
+    gl_FragColor = texture2D(tDiffuse, warped);
   }
 `
 
@@ -51,8 +38,6 @@ interface BarrelDistortionProps {
   children: React.ReactNode
   /** 0 = flat rectangle, higher = more pronounced barrel curve. */
   strength?: number
-  /** 0 = no extra edge blur, higher = softer corners. */
-  blurAmount?: number
 }
 
 /**
@@ -61,7 +46,7 @@ interface BarrelDistortionProps {
  * perfectly flat — this only affects what's finally drawn to the screen, so
  * drag math elsewhere never needs to know about the curve.
  */
-export function BarrelDistortion({ children, strength = 0.32, blurAmount = 0.028 }: BarrelDistortionProps) {
+export function BarrelDistortion({ children, strength = 0.32 }: BarrelDistortionProps) {
   const { gl, size, scene, camera } = useThree()
   const dpr = gl.getPixelRatio()
   const fbo = useFBO(Math.round(size.width * dpr), Math.round(size.height * dpr))
@@ -75,7 +60,6 @@ export function BarrelDistortion({ children, strength = 0.32, blurAmount = 0.028
         uniforms: {
           tDiffuse: { value: fbo.texture },
           strength: { value: strength },
-          blurAmount: { value: blurAmount },
         },
         depthTest: false,
         depthWrite: false,
@@ -83,7 +67,6 @@ export function BarrelDistortion({ children, strength = 0.32, blurAmount = 0.028
     [fbo.texture],
   )
   material.uniforms.strength.value = strength
-  material.uniforms.blurAmount.value = blurAmount
 
   // A non-zero priority hands full control of rendering to this callback —
   // pass 1 renders the real (flat) card scene into the FBO texture, pass 2

@@ -98,6 +98,19 @@ function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; ti
     if (type === 'gif') {
       const img = new Image()
       img.crossOrigin = 'anonymous'
+      // Some browsers only keep decoding/advancing a GIF's frames while its
+      // <img> is actually part of the rendered page — a purely in-memory
+      // Image() that's never attached can decode the first frame and then
+      // simply stop, which is why covers were stuck on frame 1. Attaching it
+      // off-screen and invisible keeps it animating without showing it.
+      img.style.position = 'absolute'
+      img.style.left = '-99999px'
+      img.style.top = '0'
+      img.style.width = '1px'
+      img.style.height = '1px'
+      img.style.opacity = '0'
+      img.style.pointerEvents = 'none'
+      document.body.appendChild(img)
       img.onload = () => {
         if (!active) return
         const c = document.createElement('canvas')
@@ -116,6 +129,7 @@ function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; ti
       img.src = url
       return () => {
         active = false
+        img.remove()
       }
     }
 
