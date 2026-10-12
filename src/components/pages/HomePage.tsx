@@ -130,7 +130,6 @@ export function HomePage({ onNavigate }: { onNavigate: (r: Route) => void }) {
             gapClassName="gap-8"
             label="Selected projects"
             showScrollbar
-            speed={30}
           >
             {scroller.map((p) => (
               <button

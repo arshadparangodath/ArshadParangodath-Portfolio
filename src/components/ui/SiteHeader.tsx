@@ -17,21 +17,14 @@ export function SiteHeader({ onNavigate }: { onNavigate: (r: Route) => void }) {
           onNavigate('home')
         }}
         aria-label="Home"
-        className="group pointer-events-auto"
+        className="pointer-events-auto"
       >
         <span className="relative block h-12 w-12 sm:h-14 sm:w-14">
           <img
             src="/logo/logo.png"
             alt="Arshad Parangodath"
             draggable={false}
-            className="absolute inset-0 h-full w-full object-contain opacity-100 transition-opacity duration-300 group-hover:opacity-0"
-          />
-          <img
-            src="/logo/logo.gif"
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="absolute inset-0 h-full w-full object-contain opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            className="h-full w-full object-contain"
           />
         </span>
       </button>
