@@ -12,12 +12,11 @@ import {
   type MeshBasicMaterial,
   SRGBColorSpace,
   Texture,
-  TextureLoader,
-  VideoTexture,
 } from 'three'
 import { CARD_W, CARD_H } from './layout'
 import { dragState } from './dragState'
 import { tagRowTexture } from './tagTexture'
+import { acquireCoverTexture, type CoverTexture } from './coverTexture'
 import { disciplineTags } from '../../data/tags'
 import { getCoverMedia, type MediaItem } from '../../data/media'
 import type { Project } from '../../data/projects'
@@ -45,116 +44,34 @@ const TAG_H = 0.135
 const STROKE = 0.03 // hairline frame width
 const STROKE_BASE = new Color('#55565f')
 
-const loader = new TextureLoader()
-loader.setCrossOrigin('anonymous')
-
-/**
- * Loads a project's cover media as a Three.js texture, whatever type it is:
- *  - image: a plain static texture, same as before.
- *  - video: THREE.VideoTexture, which Three updates every frame on its own.
- *  - gif: browsers only decode/animate GIFs inside real <img> elements, not
- *    WebGL textures, so we draw the (animating) <img> onto an offscreen
- *    canvas every frame and use that canvas as the texture — `tick()` does
- *    that redraw and must be called once per frame from the caller's own
- *    useFrame (it's a no-op for the other two types).
- * Never suspends, so the card is visible immediately either way.
- */
+/** Share decoded animated covers across repeated cards in the wall. */
 function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; tick: () => void } {
   const [texture, setTexture] = useState<Texture | null>(null)
-  const gifImg = useRef<HTMLImageElement | null>(null)
-  const gifCanvas = useRef<HTMLCanvasElement | null>(null)
-  const gifCtx = useRef<CanvasRenderingContext2D | null>(null)
-
+  const cover = useRef<CoverTexture | null>(null)
   const url = media?.url ?? ''
   const type = media?.type ?? 'image'
 
   useEffect(() => {
-    let active = true
     setTexture(null)
-    gifImg.current = null
-    gifCanvas.current = null
-    gifCtx.current = null
+    cover.current = null
     if (!url) return
-
-    if (type === 'video') {
-      const video = document.createElement('video')
-      video.crossOrigin = 'anonymous'
-      video.muted = true
-      video.loop = true
-      video.playsInline = true
-      video.src = url
-      video.play().catch(() => {})
-      const vt = new VideoTexture(video)
-      vt.colorSpace = SRGBColorSpace
-      if (active) setTexture(vt)
-      return () => {
-        active = false
-        video.pause()
-        video.removeAttribute('src')
-        video.load()
-      }
-    }
-
-    if (type === 'gif') {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      // Some browsers only keep decoding/advancing a GIF's frames while its
-      // <img> is actually part of the rendered page — a purely in-memory
-      // Image() that's never attached can decode the first frame and then
-      // simply stop, which is why covers were stuck on frame 1. Attaching it
-      // off-screen and invisible keeps it animating without showing it.
-      img.style.position = 'absolute'
-      img.style.left = '-99999px'
-      img.style.top = '0'
-      img.style.width = '1px'
-      img.style.height = '1px'
-      img.style.opacity = '0'
-      img.style.pointerEvents = 'none'
-      document.body.appendChild(img)
-      img.onload = () => {
-        if (!active) return
-        const c = document.createElement('canvas')
-        c.width = img.naturalWidth || 1
-        c.height = img.naturalHeight || 1
-        const ctx = c.getContext('2d')
-        if (!ctx) return
-        ctx.drawImage(img, 0, 0)
-        const ct = new CanvasTexture(c)
-        ct.colorSpace = SRGBColorSpace
-        gifImg.current = img
-        gifCanvas.current = c
-        gifCtx.current = ctx
-        setTexture(ct)
-      }
-      img.src = url
-      return () => {
-        active = false
-        img.remove()
-      }
-    }
-
-    loader.load(
-      url,
-      (t) => {
-        if (!active) return
-        t.colorSpace = SRGBColorSpace
-        setTexture(t)
-      },
-      undefined,
-      () => {}, // on error keep the accent-colour fallback
-    )
+    let active = true
+    const resource = acquireCoverTexture({ url, type })
+    void resource.ready.then((loaded) => {
+      if (!active) return
+      cover.current = loaded
+      setTexture(loaded.texture)
+    }, (error: unknown) => {
+      if (active) console.warn('Unable to load project cover', error)
+    })
     return () => {
       active = false
+      cover.current = null
+      resource.release()
     }
   }, [url, type])
 
-  const tick = () => {
-    if (type !== 'gif' || !gifCtx.current || !gifImg.current || !gifCanvas.current) return
-    gifCtx.current.drawImage(gifImg.current, 0, 0, gifCanvas.current.width, gifCanvas.current.height)
-    if (texture) texture.needsUpdate = true
-  }
-
-  return { texture, tick }
+  return { texture, tick: () => cover.current?.tick() }
 }
 
 /** Build a heavily-blurred version of a loaded image by downsampling it to a
@@ -205,7 +122,19 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
   const tags = useMemo(() => tagRowTexture(disciplineTags(project)), [project])
 
   useEffect(() => {
-    if (!tex) return
+    if (!tex) {
+      if (image.current) {
+        image.current.map = null
+        image.current.needsUpdate = true
+      }
+      if (panelBlur.current) {
+        panelBlur.current.map = null
+        panelBlur.current.needsUpdate = true
+      }
+      imgBase.current.set(project?.accent ?? '#888888')
+      return
+    }
+    let blurred: CanvasTexture | null = null
     if (image.current) {
       image.current.map = tex
       image.current.needsUpdate = true
@@ -213,11 +142,13 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
     }
     const src = tex.image as CanvasImageSource | undefined
     if (src && panelBlur.current) {
-      panelBlur.current.map = makeBlurred(src)
+      blurred = makeBlurred(src)
+      panelBlur.current.map = blurred
       panelBlur.current.needsUpdate = true
       panelBlur.current.color.set('#ffffff')
     }
-  }, [tex])
+    return () => { blurred?.dispose() }
+  }, [tex, project?.accent])
 
   useFrame((_, delta) => {
     tickCoverTexture()

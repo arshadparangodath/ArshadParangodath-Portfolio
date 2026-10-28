@@ -53,17 +53,25 @@ export function figmaEmbedSrc(url: string): string {
   return `https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(url)}`
 }
 
+/** Recognise animated uploads even when older records label them as images. */
+function inferFileType(url: string, fallback: MediaType = 'image'): MediaType {
+  const path = url.split(/[?#]/, 1)[0].toLowerCase()
+  if (path.endsWith('.gif')) return 'gif'
+  if (/\.(mp4|webm|mov|m4v)$/.test(path)) return 'video'
+  return fallback
+}
+
 /**
  * Coerces one raw gallery entry into a MediaItem. Handles the pre-media-types
  * format (a plain image URL string) transparently, so older projects that
  * were saved before this feature existed keep rendering correctly.
  */
 export function normalizeMediaItem(raw: unknown): MediaItem {
-  if (typeof raw === 'string') return { type: 'image', url: raw }
+  if (typeof raw === 'string') return { type: inferFileType(raw), url: raw }
   if (raw && typeof raw === 'object' && 'url' in raw) {
     const r = raw as Partial<MediaItem>
     const type = MEDIA_TYPES.includes(r.type as MediaType) ? (r.type as MediaType) : 'image'
-    return { type, url: r.url ?? '', caption: r.caption, isCover: r.isCover, layout: r.layout === 'half' ? 'half' : 'full' }
+    return { type: type === 'image' ? inferFileType(r.url ?? '', type) : type, url: r.url ?? '', caption: r.caption, isCover: r.isCover, layout: r.layout === 'half' ? 'half' : 'full' }
   }
   return { type: 'image', url: '' }
 }
@@ -103,8 +111,8 @@ export function getCoverMedia(project: {
   if (explicit) return explicit
   const firstEligible = gallery.find((m) => COVER_ELIGIBLE_TYPES.includes(m.type))
   if (firstEligible) return firstEligible
-  if (project.hero) return { type: 'image', url: project.hero }
-  if (project.thumb) return { type: 'image', url: project.thumb }
+  if (project.hero) return normalizeMediaItem(project.hero)
+  if (project.thumb) return normalizeMediaItem(project.thumb)
   return null
 }
 
