@@ -1,3 +1,4 @@
+import BlobImporter from './BlobImporter'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { COLLECTIONS, type Collection, type Project } from '../../data/projects'
 import {
@@ -375,6 +376,9 @@ function Editor({
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}
       >
         <div className="space-y-8">
+          {p.blobFolder && <p className="rounded-lg border border-white/15 p-3 text-xs text-white/60">
+            Linked Blob folder: {p.blobFolder}. Use Import Blob folders to add future uploads without changing your edits.
+          </p>}
           <section className="grid gap-4 sm:grid-cols-2">
             <Field label="Title" value={p.title} onChange={(v) => set({ title: v })} />
             <Field
@@ -487,6 +491,8 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
   const file = useRef<HTMLInputElement>(null)
+  const [blobOpen, setBlobOpen] = useState(false)
+  const [importNotice, setImportNotice] = useState('')
 
   const requestClose = () => {
     if (editing && editorDirty) setConfirmingClose(true)
@@ -562,6 +568,10 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
 
   return (
     <div data-lenis-prevent className="fixed inset-0 z-[90] flex flex-col bg-[#06070c]">
+      {blobOpen && <BlobImporter projects={projects} onClose={() => setBlobOpen(false)} onImported={(count) => {
+        setBlobOpen(false)
+        setImportNotice(`Imported ${count} folders. Open a project to refine its title, categories, year and case study.`)
+      }} />}
       {confirmingClose && (
         <ConfirmDialog
           title="Discard unsaved changes?"
@@ -642,6 +652,13 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
               >
                 + Add
               </button>
+              <button
+                onClick={() => setBlobOpen(true)}
+                disabled={!synced}
+                className="rounded-full border border-white/25 px-4 py-2 text-xs uppercase tracking-[0.15em] text-white disabled:opacity-40"
+              >
+                Import Blob folders
+              </button>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -676,6 +693,7 @@ export function ProjectAdmin({ onClose }: { onClose: () => void }) {
               </button>
             </div>
 
+            {importNotice && <p role="status" className="mt-3 text-sm text-emerald-300">{importNotice}</p>}
             {/* collection filter tabs */}
             <div className="mt-3 flex flex-wrap gap-1.5">
               {FILTER_TABS.map((tab) => (

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { head, put } from '@vercel/blob'
+import { BlobNotFoundError, head, put } from '@vercel/blob'
 
 /**
  * Single source of truth for project data, stored as one JSON blob. Replaces
@@ -8,8 +8,8 @@ import { head, put } from '@vercel/blob'
  * made them.
  *
  * GET  — public, returns the current project list (or `[]` on first run,
- *        before anything has ever been saved — the client falls back to its
- *        bundled seed list in that case).
+ *        before anything has ever been saved). Storage errors return 502
+ *        so an import cannot mistake an outage for an empty database.
  * POST — requires the `x-admin-token` header to match ADMIN_PASS. Body is
  *        the full project array; it fully replaces what's stored.
  */
@@ -25,11 +25,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const data = await upstream.json()
       res.setHeader('Cache-Control', 'no-store')
       res.status(200).json(data)
-    } catch {
-      // No blob yet (nothing has been saved through the CMS) — the client
-      // knows to fall back to its bundled seed list in this case.
+    } catch (error) {
       res.setHeader('Cache-Control', 'no-store')
-      res.status(200).json([])
+      if (error instanceof BlobNotFoundError) res.status(200).json([])
+      else {
+        console.error('Failed to read projects blob:', error)
+        res.status(502).json({ error: 'Could not load projects. Please try again.' })
+      }
     }
     return
   }

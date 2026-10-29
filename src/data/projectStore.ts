@@ -1,5 +1,6 @@
 import { projects as seedProjects, type Project } from './projects'
 import { getAdminToken } from '../lib/adminAuth'
+import { mergeBlobProject, type BlobCandidate } from './blobImport'
 
 /**
  * The CMS's data store. Project data lives in Vercel Blob storage via the
@@ -17,6 +18,7 @@ import { getAdminToken } from '../lib/adminAuth'
 
 let projects: Project[] = seedProjects
 let loaded = false
+let loadError: Error | null = null
 const listeners = new Set<() => void>()
 
 function notify() {
@@ -26,11 +28,13 @@ function notify() {
 async function load() {
   try {
     const res = await fetch('/api/projects', { cache: 'no-store' })
+    if (!res.ok) throw new Error('Could not load the project database. Reload before importing.')
     const data = (await res.json()) as Project[]
-    // An empty response means nothing has ever been saved through the CMS
-    // yet (fresh deploy, blob not created) — fall back to the bundled seed.
-    if (Array.isArray(data) && data.length > 0) projects = data
-  } catch {
+    if (!Array.isArray(data)) throw new Error('Project database response was invalid.')
+    // A saved empty database is intentional; do not resurrect deleted demo work.
+    projects = data
+  } catch (error) {
+    loadError = error instanceof Error ? error : new Error('Could not load project database.')
     // Offline, or the API isn't reachable — keep showing the bundled seed
     // rather than an empty site.
   } finally {
@@ -117,6 +121,39 @@ export async function importJSON(raw: string) {
   projects = parsed
   notify()
   await persist(parsed)
+}
+
+/** One confirmed batch write; a failed save never appears as a successful import. */
+export async function importBlobProjects(selections: { candidate: BlobCandidate; targetId: string | null }[]) {
+  await ensureLoaded()
+  if (loadError) throw loadError
+  let next = [...projects]
+  const usedFolders = new Set<string>()
+  const usedTargets = new Set<string>()
+  for (const { candidate, targetId } of selections) {
+    if (!candidate.title.trim() || !candidate.gallery.length) throw new Error('Each selected folder needs a title and media.')
+    if (usedFolders.has(candidate.folder)) throw new Error('The same folder was selected twice.')
+    usedFolders.add(candidate.folder)
+    if (targetId) {
+      if (usedTargets.has(targetId)) throw new Error('Select a different existing project for each folder, or combine subfolders.')
+      usedTargets.add(targetId)
+      const index = next.findIndex((p) => p.id === targetId)
+      if (index < 0) throw new Error('The selected project no longer exists. Scan again.')
+      next[index] = mergeBlobProject(next[index], candidate)
+    } else {
+      if (next.some((p) => p.blobFolder === candidate.folder)) throw new Error('This folder is already linked. Choose its existing project to update it.')
+      const base = candidate.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project'
+      let id = base
+      let suffix = 2
+      while (next.some((p) => p.id === id)) id = `${base}-${suffix++}`
+      next.push({ ...emptyProject(), id, title: candidate.title.trim(), client: candidate.title.split(' — ')[0].trim(),
+        blobFolder: candidate.folder, gallery: candidate.gallery })
+    }
+  }
+  if (!selections.length) return
+  await persist(next)
+  projects = next
+  notify()
 }
 
 /** A blank project pre-filled with sensible defaults for the CMS form. */

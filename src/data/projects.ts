@@ -3,6 +3,8 @@ import type { MediaItem } from './media'
 export interface Project {
   id: string
   title: string
+  /** Source folder for repeatable imports from Blob storage. */
+  blobFolder?: string
   client: string
   year: number
   category: string[]
