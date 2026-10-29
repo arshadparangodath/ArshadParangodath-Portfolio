@@ -1,190 +1,115 @@
 import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 
-/**
- * Auto-scrolling infinite rail using translate3d — the same technique as
- * TechMarquee. Two copies of children sit side by side; x advances left until
- * it equals one copy's width, then jumps back to 0. No scrollLeft involved,
- * so this works regardless of overflow or flex quirks in any browser.
- *
- * Drag gesture pauses the auto-scroll and lets the user throw the rail.
- * A drag of > 6 px suppresses the subsequent click so cards don't open
- * when the user is just scrubbing.
- */
+/** A finite project rail. Wheel gestures return to the page at either end. */
 export function DragScroller({
   children,
-  speed = 26,
   className = '',
   gapClassName = 'gap-8',
   label,
   showScrollbar = false,
-  noPauseOnHover = false,
 }: {
   children: ReactNode
-  speed?: number
   className?: string
   gapClassName?: string
   label?: string
   showScrollbar?: boolean
-  noPauseOnHover?: boolean
 }) {
   const viewport = useRef<HTMLDivElement>(null)
   const track = useRef<HTMLDivElement>(null)
-  const inner = useRef<HTMLDivElement>(null)
-  const x = useRef(0)
-  const paused = useRef(false)
   const drag = useRef({ active: false, startX: 0, startOffset: 0, moved: false })
-  const [thumbLeft, setThumbLeft] = useState(0)
-  const [thumbW, setThumbW] = useState(0.25)
+  const [progress, setProgress] = useState({ left: 0, width: 1 })
 
-  useEffect(() => {
-    let raf = 0
-    let last = performance.now()
-
-    const tick = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 1 / 20)
-      last = now
-
-      if (!paused.current && !drag.current.active) {
-        x.current -= speed * dt
-      }
-
-      // Seamless wrap: jump back by one copy's width.
-      const w = inner.current?.offsetWidth ?? 0
-      if (w > 0) {
-        if (-x.current >= w) x.current += w
-        if (x.current > 0) x.current = 0
-      }
-
-      if (track.current) {
-        track.current.style.transform = `translate3d(${x.current}px, 0, 0)`
-      }
-
-      if (showScrollbar && w > 0 && viewport.current) {
-        const vw = viewport.current.offsetWidth
-        const frac = (-x.current % w) / w
-        setThumbLeft(frac)
-        setThumbW(Math.min(vw / w, 0.5))
-      }
-
-      raf = requestAnimationFrame(tick)
-    }
-
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [speed, showScrollbar])
-
-  // Non-passive wheel listener so scrolling with the cursor over the
-  // carousel pans it horizontally — this covers a plain vertical scroll from
-  // a standard mouse wheel (the common case) as well as a horizontal
-  // gesture from a trackpad or shift+wheel. We preventDefault so the event
-  // doesn't also bubble up as a page scroll while it's being used to pan the
-  // carousel — the same convention used by most horizontal-carousel UIs
-  // (Netflix rows, Apple product pages, etc.). The user just needs to move
-  // the cursor off the carousel to keep scrolling the page past it.
   useEffect(() => {
     const el = viewport.current
-    if (!el) return
-    const onWheel = (e: WheelEvent) => {
-      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
-      if (delta === 0) return
-      e.preventDefault()
-      x.current -= delta * 1.2
+    const content = track.current
+    if (!el || !content) return
+
+    const updateProgress = () => {
+      const max = el.scrollWidth - el.clientWidth
+      const width = Math.min(el.clientWidth / Math.max(el.scrollWidth, 1), 1)
+      setProgress({ width, left: max > 0 ? (el.scrollLeft / max) * (1 - width) : 0 })
     }
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return // Preserve trackpad pinch zoom.
+      const rawDelta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      const delta = rawDelta * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientWidth : 1)
+      const max = el.scrollWidth - el.clientWidth
+      const canScroll = delta > 0 ? el.scrollLeft < max - 1 : el.scrollLeft > 1
+      if (!delta || max <= 1 || !canScroll) return
+
+      // Keep Lenis from consuming a gesture used by the rail. At a boundary,
+      // leave the event untouched so normal page scrolling reaches the footer.
+      e.preventDefault()
+      e.stopPropagation()
+      el.scrollLeft = Math.max(0, Math.min(max, el.scrollLeft + delta))
+    }
+
+    const observer = new ResizeObserver(updateProgress)
+    observer.observe(el)
+    observer.observe(content)
+    el.addEventListener('scroll', updateProgress, { passive: true })
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    updateProgress()
+    return () => {
+      observer.disconnect()
+      el.removeEventListener('scroll', updateProgress)
+      el.removeEventListener('wheel', onWheel)
+    }
   }, [])
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    // Note: pointer capture is intentionally NOT taken here. Capturing on
-    // every pointerdown (including a plain click) retargets the resulting
-    // synthetic `click` event to this element instead of the button that was
-    // actually clicked — per the Pointer Events spec, once an element holds
-    // pointer capture, compatibility mouse/click events are redirected to it.
-    // That silently broke clicks on cards. We only capture once we've
-    // confirmed an actual drag, in onPointerMove below.
-    drag.current = { active: true, startX: e.clientX, startOffset: x.current, moved: false }
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    // Touch uses native horizontal swipe and vertical page scrolling.
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    drag.current = { active: true, startX: e.clientX, startOffset: e.currentTarget.scrollLeft, moved: false }
   }, [])
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!drag.current.active) return
     const dx = e.clientX - drag.current.startX
     if (!drag.current.moved && Math.abs(dx) > 10) {
       drag.current.moved = true
-      // Now that we know this is a real drag (not a click), capture the
-      // pointer so the rest of the gesture tracks correctly even if the
-      // cursor leaves the viewport.
-      try {
-        ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
-      } catch {
-        /* pointer may already be gone — safe to ignore */
-      }
+      e.currentTarget.setPointerCapture(e.pointerId)
     }
-    if (drag.current.moved) {
-      x.current = drag.current.startOffset + dx
-    }
+    if (drag.current.moved) e.currentTarget.scrollLeft = drag.current.startOffset - dx
   }, [])
 
-  const onPointerUp = useCallback((e: React.PointerEvent) => {
+  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     drag.current.active = false
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      ;(e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId)
-    }
-    // Defer reset so the click event (which fires right after pointerup) can
-    // still read the moved flag before we clear it.
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    // Preserve the drag flag until the following click has been suppressed.
     requestAnimationFrame(() => { drag.current.moved = false })
   }, [])
 
   return (
     <div className="relative">
-      {/* Clip the overflowing track without disrupting layout. */}
       <div
         ref={viewport}
         aria-label={label}
-        data-lenis-prevent
-        className={`overflow-hidden ${className}`}
-        onPointerEnter={() => { if (!noPauseOnHover) paused.current = true }}
-        onPointerLeave={() => { paused.current = false }}
+        tabIndex={0}
+        className={`overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onPointerLeave={() => { if (!drag.current.moved) drag.current.active = false }}
+        onDragStart={(e) => e.preventDefault()}
         onClickCapture={(e) => {
-          // Suppress click if the user was dragging (moved more than threshold).
           if (drag.current.moved) {
             e.preventDefault()
             e.stopPropagation()
           }
         }}
-      onClick={(e) => {
-          // Secondary guard: never let a dragged interaction reach children.
-          if (drag.current.moved) {
-            e.preventDefault()
-            e.stopPropagation()
-          }
-        }}
-        style={{ cursor: drag.current.active ? 'grabbing' : 'grab' }}
+        style={{ cursor: 'grab' }}
       >
-        {/* The moving strip — two copies for seamless looping. */}
-        <div ref={track} className={`flex w-max will-change-transform ${gapClassName}`}>
-          <div ref={inner} className={`flex shrink-0 ${gapClassName}`}>
-            {children}
-          </div>
-          <div className={`flex shrink-0 ${gapClassName}`} aria-hidden>
-            {children}
-          </div>
+        <div ref={track} className={`flex w-max ${gapClassName}`}>
+          {children}
         </div>
       </div>
-
       {showScrollbar && (
         <div className="mx-6 mt-5 h-px bg-white/10 sm:mx-10">
           <div
-            className="h-full bg-white/40"
-            style={{
-              position: 'relative',
-              left: `${thumbLeft * 100}%`,
-              width: `${thumbW * 100}%`,
-              transition: 'left 80ms linear',
-            }}
+            className="relative h-full bg-white/40"
+            style={{ left: `${progress.left * 100}%`, width: `${progress.width * 100}%` }}
           />
         </div>
       )}
