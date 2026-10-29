@@ -87,6 +87,12 @@ test('inventory endpoint enforces authentication, validates prefix, forwards pag
     const ok = response(); await handler({ method: 'GET', headers: { 'x-admin-token': 'test-pass' }, query: { prefix: 'Assets/Projects', cursor: 'page-two' } }, ok)
     assert.equal(ok.code, 200); assert.equal(ok.body.files.length, 6); assert.equal(ok.body.cursor, 'page-three')
     assert.equal(ok.headers['Cache-Control'], 'no-store')
+    // Absence of the legacy token must not block SDK-supported OIDC auth.
+    delete process.env.BLOB_READ_WRITE_TOKEN
+    const oidc = response()
+    await handler({ method: 'GET', headers: { 'x-admin-token': 'test-pass' }, query: { prefix: root, cursor: 'page-two' } }, oidc)
+    assert.equal(oidc.code, 200)
+    assert.equal(called, 2)
     const wrongMethod = response(); await handler({ method: 'POST' }, wrongMethod); assert.equal(wrongMethod.code, 405)
   } finally {
     for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value }

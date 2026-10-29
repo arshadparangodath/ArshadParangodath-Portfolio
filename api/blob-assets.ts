@@ -11,9 +11,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!process.env.ADMIN_PASS || req.headers['x-admin-token'] !== process.env.ADMIN_PASS) {
     return res.status(401).json({ error: 'Sign in to the admin again to browse Blob folders.' })
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return res.status(503).json({ error: 'Connect the asset Blob store to this Vercel project using BLOB_READ_WRITE_TOKEN, then redeploy.' })
-  }
+  // Let the SDK resolve authentication. A connected store may use OIDC
+  // (VERCEL_OIDC_TOKEN + BLOB_STORE_ID), not a legacy read-write token.
   const prefix = req.query.prefix
   const cursor = req.query.cursor
   if (typeof prefix !== 'string' || !prefix || prefix.length > 1000 ||

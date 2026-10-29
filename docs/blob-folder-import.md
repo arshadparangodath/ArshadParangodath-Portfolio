@@ -1,9 +1,10 @@
 # Import portfolio work from Blob folders
 
 Deploy this code to the existing Vercel project, then open `/admin` and sign in.
-The importer uses the existing server-side `BLOB_READ_WRITE_TOKEN` and `ADMIN_PASS`.
-The Blob token must belong to the store containing your project assets. Never paste
-it into the admin UI or commit it to the repository.
+The importer uses the same Blob SDK credential resolution as the project database:
+`BLOB_READ_WRITE_TOKEN`, or a connected OIDC store using `VERCEL_OIDC_TOKEN` and
+`BLOB_STORE_ID`. Admin access still requires `ADMIN_PASS`. Credentials must identify
+the store containing the assets. Never paste tokens into the admin UI or commit them.
 
 1. Click **Import Blob folders**.
 2. Leave the path as `Assets/Projects/` (case-sensitive), or enter a specific project folder.
