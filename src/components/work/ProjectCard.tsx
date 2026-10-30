@@ -2,14 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import {
+  BufferGeometry,
   DoubleSide,
   FrontSide,
   Group,
+  LineBasicMaterial,
   MathUtils,
   type MeshBasicMaterial,
   Texture,
+  Vector3,
 } from 'three'
 import { CARD_W, CARD_H } from './layout'
+import CardBackdrop from './CardBackdrop'
 import { dragState } from './dragState'
 import { tagRowTexture } from './tagTexture'
 import { acquireCoverTexture, type CoverTexture } from './coverTexture'
@@ -38,7 +42,19 @@ const META_SIZE = 0.115
 const TAG_H = 0.18
 const TAG_W = CARD_W - EDGE * 2 - 0.62
 
-const STROKE = 0.03 // hairline frame width
+// Dividers sit just INSIDE each cell, in front of its panel. A frame behind
+// the panels is hidden by the neighbouring cells because the grid has no gaps.
+const BORDER_INSET = 0.006
+const bx = CARD_W / 2 - BORDER_INSET
+const by = CARD_H / 2 - BORDER_INSET
+const borderGeometry = new BufferGeometry().setFromPoints([
+  new Vector3(-bx, -by, 0), new Vector3(bx, -by, 0),
+  new Vector3(bx, -by, 0), new Vector3(bx, by, 0),
+  new Vector3(bx, by, 0), new Vector3(-bx, by, 0),
+  new Vector3(-bx, by, 0), new Vector3(-bx, -by, 0),
+])
+const idleBorder = new LineBasicMaterial({ color: '#40434d', toneMapped: false })
+const activeBorder = new LineBasicMaterial({ color: '#80848e', toneMapped: false })
 
 /** Share decoded animated covers across repeated cards in the wall. */
 function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; tick: () => void } {
@@ -146,17 +162,17 @@ export function ProjectCard({ project, cardKey, hovered, focused, onHover, onSel
         onSelect(project.id, cardKey)
       }}
     >
-      {/* always-on thin grey stroke frame — distinguishes adjacent cards */}
-      <mesh position={[0, 0, -0.02]}>
-        <planeGeometry args={[CARD_W + STROKE * 2, CARD_H + STROKE * 2]} />
-        <meshBasicMaterial color={hovered ? '#777985' : '#30323b'} side={DoubleSide} toneMapped={false} />
-      </mesh>
-
       {/* A neutral, opaque panel keeps metadata readable at every position. */}
       <mesh position={[0, 0, 0]}>
         <planeGeometry args={[CARD_W, CARD_H]} />
         <meshBasicMaterial color="#0c0d12" side={DoubleSide} toneMapped={false} />
       </mesh>
+
+      <CardBackdrop texture={tex} hovered={hovered && !focused} />
+
+      {/* One-pixel dividers follow the gallery's curved projection. */}
+      <lineSegments geometry={borderGeometry} material={hovered ? activeBorder : idleBorder}
+        position={[0, 0, 0.008]} dispose={null} raycast={() => {}} />
 
       {/* generously padded thumbnail, floating in the middle of the card */}
       <mesh position={[0, IMG_CENTER_Y, 0.01]}>
