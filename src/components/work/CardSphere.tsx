@@ -174,7 +174,6 @@ export function CardSphere({
             project={card.project}
             cardKey={card.key}
             hovered={hoveredKey === card.key}
-            dimmed={false}
             focused={selectedKey === card.key}
             onHover={onHover}
             onSelect={onSelect}

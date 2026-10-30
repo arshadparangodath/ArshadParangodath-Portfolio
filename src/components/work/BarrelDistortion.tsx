@@ -31,6 +31,9 @@ const fragmentShader = /* glsl */ `
     // No blur — distortion only. A single sample at the warped coordinate,
     // full sharpness everywhere including the corners.
     gl_FragColor = texture2D(tDiffuse, warped);
+    // The FBO is linear. Convert once at the final screen pass so covers
+    // and typography retain their original sRGB colors.
+    #include <colorspace_fragment>
   }
 `
 
@@ -63,6 +66,7 @@ export function BarrelDistortion({ children, strength = 0.32 }: BarrelDistortion
         },
         depthTest: false,
         depthWrite: false,
+        toneMapped: false,
       }),
     [fbo.texture],
   )

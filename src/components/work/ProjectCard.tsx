@@ -2,15 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import {
-  AdditiveBlending,
-  CanvasTexture,
-  Color,
   DoubleSide,
   FrontSide,
   Group,
   MathUtils,
   type MeshBasicMaterial,
-  SRGBColorSpace,
   Texture,
 } from 'three'
 import { CARD_W, CARD_H } from './layout'
@@ -26,8 +22,8 @@ import type { Project } from '../../data/projects'
 // generous breathing room on every side, as in the reference layout.
 const EDGE = 0.17 // gutter from the card edge to the metadata
 const PAD_X = 0.5 // horizontal padding around the image
-const PAD_TOP = 0.46 // space above the image (below the top metadata row)
-const PAD_BOTTOM = 0.62 // space below the image (above the tag row)
+const PAD_TOP = 0.62 // space above the image (below the top metadata row)
+const PAD_BOTTOM = 0.82 // space below the image (above the tag row)
 
 const IMG_W = CARD_W - PAD_X * 2
 const IMG_H = CARD_H - PAD_TOP - PAD_BOTTOM
@@ -38,11 +34,11 @@ const TEXT_R = CARD_W / 2 - EDGE
 const ROW_TOP = CARD_H / 2 - EDGE
 const ROW_BOTTOM = -CARD_H / 2 + EDGE
 
-const META_SIZE = 0.088
-const TAG_H = 0.135
+const META_SIZE = 0.115
+const TAG_H = 0.18
+const TAG_W = CARD_W - EDGE * 2 - 0.62
 
 const STROKE = 0.03 // hairline frame width
-const STROKE_BASE = new Color('#55565f')
 
 /** Share decoded animated covers across repeated cards in the wall. */
 function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; tick: () => void } {
@@ -74,80 +70,38 @@ function useAsyncTexture(media: MediaItem | null): { texture: Texture | null; ti
   return { texture, tick: () => cover.current?.tick() }
 }
 
-/** Build a heavily-blurred version of a loaded image by downsampling it to a
- *  tiny canvas and letting the GPU smear it back up. */
-function makeBlurred(img: CanvasImageSource): CanvasTexture {
-  const c = document.createElement('canvas')
-  c.width = 10
-  c.height = 14
-  const ctx = c.getContext('2d')!
-  ctx.drawImage(img, 0, 0, c.width, c.height)
-  const t = new CanvasTexture(c)
-  t.colorSpace = SRGBColorSpace
-  return t
-}
-
 interface ProjectCardProps {
   project: Project
   cardKey: string
   hovered: boolean
-  dimmed: boolean
   focused: boolean
   onHover: (key: string | null) => void
   onSelect: (id: string, key: string) => void
 }
 
-/**
- * A framed 3:4 card: a blurred, zoomed copy of its own thumbnail fills the
- * panel as a background, with the sharp padded thumbnail floating on top and
- * a caption below. A thin stroke is always present. Hovering does not resize
- * the card — the blurred backdrop fading in behind the thumbnail is the only
- * hover effect. Positioning is
- * handled by the parent wall.
- */
-export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHover, onSelect }: ProjectCardProps) {
+/** A neutral card with unmodified cover colors and readable metadata. */
+export function ProjectCard({ project, cardKey, hovered, focused, onHover, onSelect }: ProjectCardProps) {
   const inner = useRef<Group>(null)
   const image = useRef<MeshBasicMaterial>(null)
-  const stroke = useRef<MeshBasicMaterial>(null)
-  const panelBlur = useRef<MeshBasicMaterial>(null)
-  const imgBase = useRef(new Color(project?.accent ?? '#888888'))
-  const accent = useRef(new Color(project?.accent ?? '#ffffff'))
-  const h = useRef(0) // smoothed hover factor
-  const local = useRef({ x: 0, y: 0 }) // cursor pos within the card, -1..1
   // Spring state for the lift (position.z) — critically-damped-ish feel.
   const lift = useRef({ v: 0, x: 0 })
 
   const cover = useMemo(() => getCoverMedia(project ?? {}), [project])
   const { texture: tex, tick: tickCoverTexture } = useAsyncTexture(cover)
-  const tags = useMemo(() => tagRowTexture(disciplineTags(project)), [project])
+  const tags = useMemo(() => tagRowTexture(disciplineTags(project), TAG_W / TAG_H), [project])
+  const tagHeight = TAG_H * (tags.rows + (tags.rows - 1) * 0.2)
+  const source = tex?.image as { width?: number; height?: number; videoWidth?: number; videoHeight?: number } | undefined
+  const sourceWidth = source?.videoWidth || source?.width || IMG_W
+  const sourceHeight = source?.videoHeight || source?.height || IMG_H
+  const aspect = sourceWidth / sourceHeight
+  const coverWidth = Math.min(IMG_W, IMG_H * aspect)
+  const coverHeight = Math.min(IMG_H, IMG_W / aspect)
 
   useEffect(() => {
-    if (!tex) {
-      if (image.current) {
-        image.current.map = null
-        image.current.needsUpdate = true
-      }
-      if (panelBlur.current) {
-        panelBlur.current.map = null
-        panelBlur.current.needsUpdate = true
-      }
-      imgBase.current.set(project?.accent ?? '#888888')
-      return
-    }
-    let blurred: CanvasTexture | null = null
-    if (image.current) {
-      image.current.map = tex
-      image.current.needsUpdate = true
-      imgBase.current.set('#ffffff')
-    }
-    const src = tex.image as CanvasImageSource | undefined
-    if (src && panelBlur.current) {
-      blurred = makeBlurred(src)
-      panelBlur.current.map = blurred
-      panelBlur.current.needsUpdate = true
-      panelBlur.current.color.set('#ffffff')
-    }
-    return () => { blurred?.dispose() }
+    if (!image.current) return
+    image.current.map = tex
+    image.current.color.set(tex ? '#ffffff' : (project?.accent ?? '#888888'))
+    image.current.needsUpdate = true
   }, [tex, project?.accent])
 
   useFrame((_, delta) => {
@@ -156,11 +110,7 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
     if (!g) return
     const k = 1 - Math.pow(0.0015, delta)
 
-    h.current = MathUtils.lerp(h.current, hovered ? 1 : 0, k)
-
-    // Spring-driven lift toward the camera — only for the focused/opened
-    // state now. Hovering no longer elevates, scales, or tilts the card; the
-    // blur backdrop fading in is the only hover effect.
+    // Preserve the focused-card transition without changing cover colors.
     const targetZ = focused ? 3.4 : 0
     const s = lift.current
     const dt = Math.min(delta, 1 / 30)
@@ -172,15 +122,6 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
 
     const targetScale = focused ? 2.3 : 1
     g.scale.setScalar(MathUtils.lerp(g.scale.x, targetScale, k))
-
-    if (image.current) {
-      const bright = focused ? 1 : dimmed ? 0.42 : 0.9
-      image.current.color.copy(imgBase.current).multiplyScalar(bright)
-    }
-    // Blurred backdrop fills in behind the thumbnail only while hovering —
-    // subtle (never fully opaque) so it reads as a soft ambient fill, not a
-    // solid layer swap.
-    if (panelBlur.current) panelBlur.current.opacity = h.current * 0.6
   })
 
   if (!project) return null
@@ -193,16 +134,9 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
         onHover(cardKey)
         document.body.style.cursor = 'pointer'
       }}
-      onPointerMove={(e) => {
-        if (!e.uv) return
-        local.current.x = e.uv.x * 2 - 1
-        local.current.y = e.uv.y * 2 - 1
-      }}
       onPointerOut={(e) => {
         e.stopPropagation()
         onHover(null)
-        local.current.x = 0
-        local.current.y = 0
         document.body.style.cursor = ''
       }}
       onClick={(e) => {
@@ -215,28 +149,18 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
       {/* always-on thin grey stroke frame — distinguishes adjacent cards */}
       <mesh position={[0, 0, -0.02]}>
         <planeGeometry args={[CARD_W + STROKE * 2, CARD_H + STROKE * 2]} />
-        <meshBasicMaterial ref={stroke} color={STROKE_BASE} side={DoubleSide} toneMapped={false} />
+        <meshBasicMaterial color={hovered ? '#777985' : '#30323b'} side={DoubleSide} toneMapped={false} />
       </mesh>
 
-      {/* card panel — a blurred, zoomed copy of the thumbnail fills the
-          padding around the sharp image, contained within this card's own
-          frame (not bleeding onto neighbouring cards). Falls back to a flat
-          accent colour until the texture loads. */}
+      {/* A neutral, opaque panel keeps metadata readable at every position. */}
       <mesh position={[0, 0, 0]}>
         <planeGeometry args={[CARD_W, CARD_H]} />
-        <meshBasicMaterial
-          ref={panelBlur}
-          color={project.accent}
-          transparent
-          opacity={0}
-          side={DoubleSide}
-          toneMapped={false}
-        />
+        <meshBasicMaterial color="#0c0d12" side={DoubleSide} toneMapped={false} />
       </mesh>
 
       {/* generously padded thumbnail, floating in the middle of the card */}
       <mesh position={[0, IMG_CENTER_Y, 0.01]}>
-        <planeGeometry args={[IMG_W, IMG_H]} />
+        <planeGeometry args={[coverWidth, coverHeight]} />
         <meshBasicMaterial ref={image} color={project.accent} side={DoubleSide} toneMapped={false} />
       </mesh>
 
@@ -246,11 +170,11 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
         anchorX="left"
         anchorY="top"
         fontSize={META_SIZE * 1.16}
-        color="#efece4"
+        color="#ffffff"
         maxWidth={CARD_W * 0.42}
       >
         {project.client}
-        <meshBasicMaterial side={FrontSide} toneMapped={false} color="#efece4" />
+        <meshBasicMaterial side={FrontSide} toneMapped={false} color="#ffffff" />
       </Text>
 
       {/* top-right: project title */}
@@ -260,17 +184,18 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
         anchorY="top"
         textAlign="right"
         fontSize={META_SIZE}
-        letterSpacing={0.09}
-        color="#b9b5ac"
+        lineHeight={1.18}
+        letterSpacing={0.03}
+        color="#f1f3f7"
         maxWidth={CARD_W * 0.52}
       >
         {project.title.toUpperCase()}
-        <meshBasicMaterial side={FrontSide} toneMapped={false} color="#b9b5ac" />
+        <meshBasicMaterial side={FrontSide} toneMapped={false} color="#f1f3f7" />
       </Text>
 
       {/* bottom-left: discipline tags */}
-      <mesh position={[TEXT_L + (TAG_H * tags.aspect) / 2, ROW_BOTTOM + TAG_H / 2, 0.02]}>
-        <planeGeometry args={[TAG_H * tags.aspect, TAG_H]} />
+      <mesh position={[TEXT_L + (tagHeight * tags.aspect) / 2, ROW_BOTTOM + tagHeight / 2, 0.02]}>
+        <planeGeometry args={[tagHeight * tags.aspect, tagHeight]} />
         <meshBasicMaterial
           map={tags.texture}
           transparent
@@ -286,11 +211,11 @@ export function ProjectCard({ project, cardKey, hovered, dimmed, focused, onHove
         anchorX="right"
         anchorY="bottom"
         fontSize={META_SIZE}
-        letterSpacing={0.09}
-        color="#8b8880"
+        letterSpacing={0.03}
+        color="#cbd0da"
       >
         {String(project.year)}
-        <meshBasicMaterial side={FrontSide} toneMapped={false} color="#8b8880" />
+        <meshBasicMaterial side={FrontSide} toneMapped={false} color="#cbd0da" />
       </Text>
     </group>
   )
